@@ -1,0 +1,138 @@
+@import '../../styles/base.css';
+
+.popup {
+  width: 360px;
+  max-height: 580px;
+  overflow-y: auto;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.popup-header h1 {
+  font-size: 14px;
+}
+
+.popup > .notice {
+  margin: 8px 12px 0;
+}
+.reload {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.site {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.site .switch-row {
+  justify-content: space-between;
+}
+.site-host {
+  font-weight: 600;
+}
+
+section + section,
+.site + section {
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  padding: 12px 12px 4px;
+  font-size: 12px;
+}
+
+.empty {
+  margin: 0;
+  padding: 8px 12px 12px;
+}
+
+.list {
+  margin: 0;
+  padding: 0 0 8px;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+}
+.row > .truncate {
+  flex: 1;
+}
+
+.disclosure {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+.chevron {
+  display: inline-block;
+  width: 10px;
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+.disclosure[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+.count {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--blocked-bg);
+  color: var(--blocked);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.files {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+}
+.file {
+  padding-left: 28px;
+}
+
+.pending {
+  flex: none;
+  color: var(--ok);
+  font-size: 12px;
+}
+
+.inline-row .count {
+  margin-left: auto;
+}
+
+.rule .badge {
+  flex: none;
+}
+
+.popup-footer {
+  padding: 4px 8px 8px;
+}
