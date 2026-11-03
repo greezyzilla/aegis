@@ -1,0 +1,190 @@
+@import '../../styles/base.css';
+
+.options {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+  display: grid;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.options-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.options-header h1 {
+  font-size: 20px;
+}
+.options-header p {
+  margin: 4px 0 0;
+}
+
+.card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.card h2 {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.card > p {
+  margin: -8px 0 12px;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.card-head h2 {
+  margin: 0;
+}
+.hint {
+  margin: 12px 0 0 !important;
+  font-size: 12px;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+}
+.filters input {
+  width: 240px;
+}
+
+.rule-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr auto;
+  align-items: start;
+  gap: 12px;
+}
+.field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.field label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.field-error {
+  font-size: 12px;
+  color: var(--blocked);
+}
+.scope-input {
+  display: flex;
+  gap: 6px;
+}
+.scope-input > * {
+  flex: 1;
+}
+.form-actions {
+  display: flex;
+  gap: 8px;
+  align-self: end;
+}
+.form-actions .btn {
+  height: 30px;
+}
+
+.rules {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rules th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.rules td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  word-break: break-all;
+}
+.rules tr:last-child td {
+  border-bottom: none;
+}
+.rules td .rule-form {
+  padding: 6px 0;
+}
+.row-actions {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.chip-remove {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+}
+.chip-remove:hover {
+  color: var(--blocked);
+}
+
+.empty {
+  margin: 0;
+}
+.notice {
+  margin: 12px 0 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .rule-form,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .filters {
+    width: 100%;
+  }
+  .filters input {
+    flex: 1;
+    width: auto;
+  }
+}
