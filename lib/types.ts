@@ -57,6 +57,8 @@ export interface TabState {
   /** Hosts of iframes loaded in the tab. */
   frames: string[];
   inline: InlineBlock[];
+  /** Host of the top-level page; missing in state saved before it was tracked. */
+  page?: string;
 }
 
 export const emptyTabState = (): TabState => ({ scripts: [], frames: [], inline: [] });

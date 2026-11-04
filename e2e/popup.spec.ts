@@ -229,6 +229,29 @@ test.describe('popup', () => {
     await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('3');
   });
 
+  test('on an inactive site the badge ignores scripts blocked by another blocker', async ({ setSettings, context, visit, openPopup, sw, tabIdOf }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('cdn.test')] });
+    // Stands in for Brave Shields: fails the request with the same net::ERR_BLOCKED_BY_CLIENT.
+    await context.route(/other\.test/, (route) => route.abort('blockedbyclient'));
+    const site = await visit('site-a.test');
+    const tabId = await tabIdOf(site);
+    const popup = await openPopup(site);
+
+    await expect(popup.locator('.block-rule', { hasText: 'cdn.test' })).toContainText('3 keblok');
+    await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('3');
+  });
+
+  test('on an active site the badge counts every blocked script, and the popup lists them', async ({ setSettings, context, visit, openPopup, sw, tabIdOf }) => {
+    await setSettings({ ...DEFAULTS, rules: [rule('other.test')] });
+    await context.route(/other\.test/, (route) => route.abort('blockedbyclient'));
+    const site = await visit('site-a.test');
+    const tabId = await tabIdOf(site);
+    const popup = await openPopup(site);
+
+    await expect(popup.getByRole('button', { name: /^other\.test 1$/ })).toBeVisible();
+    await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('5');
+  });
+
   test('activating a site and closing the popup reloads the tab with blocking on', async ({ setSettings, visit, openPopup, ran }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const site = await visit('www.shop.test');

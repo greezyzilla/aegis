@@ -3,6 +3,7 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import {
   addBlocks,
   addRules,
+  badgeCount,
   blockMatches,
   DEFAULT_SETTINGS,
   editRule,
@@ -123,6 +124,25 @@ describe('site flags', () => {
     await setSiteFlag('inlineSites', 'a.test', 'a.test', true);
     await removeSite('inlineSites', 'a.test');
     expect((await get()).inlineSites).toEqual([]);
+  });
+});
+
+describe('badgeCount', () => {
+  const entry = (host: string, blocked: boolean) => ({ url: `https://${host}/x.js`, host, file: 'x.js', initiator: 'page.test', blocked });
+  const scripts = [entry('tracker.test', true), entry('shields.test', true), entry('cdn.test', false)];
+  const settings = { ...DEFAULT_SETTINGS, blocks: [{ id: '1', domain: 'tracker.test', createdAt: 0 }] };
+  const state = (page?: string) => ({ scripts, frames: [], inline: [], page });
+
+  it('counts only global-block hits on an inactive page', () => {
+    expect(badgeCount(settings, state('page.test'))).toBe(1);
+  });
+
+  it('counts every blocked script on an active page, subdomains included', () => {
+    expect(badgeCount({ ...settings, activeSites: ['page.test'] }, state('www.page.test'))).toBe(2);
+  });
+
+  it('counts every blocked script when the page is unknown', () => {
+    expect(badgeCount(settings, state(undefined))).toBe(2);
   });
 });
 

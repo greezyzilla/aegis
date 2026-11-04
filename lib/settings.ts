@@ -1,6 +1,6 @@
 import { storage } from '#imports';
 import { hostMatches } from './domain';
-import type { AllowRule, BlockRule, NewBlock, NewRule, ScriptEntry, Settings } from './types';
+import type { AllowRule, BlockRule, NewBlock, NewRule, ScriptEntry, Settings, TabState } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
   rules: [],
@@ -108,6 +108,16 @@ export function ruleMatches(rule: AllowRule, entry: Pick<ScriptEntry, 'url' | 'h
   if (!rule.script) return true;
   const afterHost = entry.url.slice(entry.url.indexOf(entry.host) + entry.host.length);
   return scriptPatternToRegex(rule.script).test(afterHost);
+}
+
+/**
+ * Blocked scripts the popup can show for this tab: every one on an active site, only global-block
+ * hits elsewhere (scripts another blocker stopped are not listed there). Unknown page counts all.
+ */
+export function badgeCount(s: Settings, state: TabState): number {
+  const page = state.page;
+  const active = !page || s.activeSites.some((d) => hostMatches(page, d));
+  return state.scripts.filter((e) => e.blocked && (active || s.blocks.some((b) => blockMatches(b, e)))).length;
 }
 
 export function blockMatches(block: BlockRule, entry: Pick<ScriptEntry, 'url' | 'host' | 'initiator'>): boolean {

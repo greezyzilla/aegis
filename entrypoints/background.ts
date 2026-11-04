@@ -1,7 +1,7 @@
 import { browser, storage, type Browser } from '#imports';
 import { fileFromUrl, hostFromUrl } from '@/lib/domain';
 import { buildDnrRules } from '@/lib/rules';
-import { isAutoReload, settingsItem } from '@/lib/settings';
+import { badgeCount, isAutoReload, settingsItem } from '@/lib/settings';
 import { POPUP_PORT, syncErrorKey, tabStateKey, type PopupPortMessage } from '@/lib/tabs';
 import { emptyTabState, normalizeTabState, type InlineBlockedMessage, type ScriptEntry, type TabState } from '@/lib/types';
 
@@ -66,12 +66,18 @@ export default defineBackground(() => {
         if (state) void storage.setItem(tabStateKey(tabId), state);
       }, PERSIST_DELAY_MS),
     );
-    const blocked = tabs.get(tabId)?.scripts.filter((s) => s.blocked).length ?? 0;
-    void browser.action.setBadgeText({ tabId, text: blocked ? String(blocked) : '' }).catch(() => {});
+    void settingsItem
+      .getValue()
+      .then((settings) => {
+        const state = tabs.get(tabId);
+        const blocked = state ? badgeCount(settings, state) : 0;
+        return browser.action.setBadgeText({ tabId, text: blocked ? String(blocked) : '' });
+      })
+      .catch(() => {});
   };
 
-  const resetTab = (tabId: number) => {
-    tabs.set(tabId, emptyTabState());
+  const resetTab = (tabId: number, page?: string) => {
+    tabs.set(tabId, { ...emptyTabState(), page });
     persist(tabId);
   };
 
@@ -124,7 +130,7 @@ export default defineBackground(() => {
 
   browser.webRequest.onBeforeRequest.addListener(
     (d) => {
-      if (d.frameId === 0 && d.tabId >= 0) resetTab(d.tabId);
+      if (d.frameId === 0 && d.tabId >= 0) resetTab(d.tabId, hostFromUrl(d.url) ?? undefined);
       return undefined;
     },
     { urls: ['<all_urls>'], types: ['main_frame'] },
