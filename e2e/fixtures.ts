@@ -2,6 +2,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { chromium, test as base, expect, type BrowserContext, type Page, type Worker } from '@playwright/test';
+import { buildDnrRules } from '../lib/rules';
 import type { AllowRule, BlockRule, Settings, TabState } from '../lib/types';
 
 const EXTENSION_PATH = path.resolve(import.meta.dirname, '../dist/chrome-mv3');
@@ -139,10 +140,12 @@ export const test = base.extend<Fixtures, { port: number }>({
   setSettings: async ({ sw }, use) => {
     await use(async (s) => {
       await sw.evaluate((settings) => chrome.storage.local.set({ settings }), s);
-      const expected = 3 + s.rules.length + s.inlineSites.length + s.blocks.length;
+      // Wait for these exact rules, not just a count: different settings can yield the same number
+      // of rules (e.g. a fresh install and one active site), and a page loaded in between mixes both.
+      const expected = buildDnrRules(s);
       await expect
-        .poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length))
-        .toBe(expected);
+        .poll(() => sw.evaluate(async () => chrome.declarativeNetRequest.getDynamicRules()))
+        .toMatchObject(expected);
     });
   },
 
