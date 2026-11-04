@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { importSettings } from '@/entrypoints/options/backup';
-import { addRules, settingsItem, setSiteFlag } from '@/lib/settings';
+import { addRules, settingsItem, setSiteFlag, updateSettings } from '@/lib/settings';
 
 const file = (data: unknown) => new File([typeof data === 'string' ? data : JSON.stringify(data)], 'b.json');
 
@@ -33,7 +33,7 @@ describe('importSettings', () => {
         inlineSites: 'not-an-array',
       }),
     );
-    expect(n).toBe(4);
+    expect(n).toEqual({ count: 4, listsToEnable: [] });
     const s = await settingsItem.getValue();
     expect(s.rules.map(({ domain, script, scope }) => ({ domain, script, scope }))).toEqual([
       { domain: 'cdn.test', script: undefined, scope: 'global' },
@@ -62,9 +62,44 @@ describe('importSettings', () => {
     const n = await importSettings(
       file({ app: 'aegis', version: 1, rules: [{ domain: 'cdn.test', scope: 'global' }], pausedSites: ['a.test'], inlineSites: ['b.test'] }),
     );
-    expect(n).toBe(1);
+    expect(n).toEqual({ count: 1, listsToEnable: [] });
     const s = await settingsItem.getValue();
     expect(s.activeSites).toEqual([]);
     expect(s.inlineSites).toEqual(['b.test']);
+  });
+
+  it('v3 merges list overrides and reports lists to enable, skipping unknown ids and bad hosts', async () => {
+    await updateSettings((x) => ({ ...x, listAllow: ['old.test'] }));
+    const r = await importSettings(
+      file({
+        app: 'aegis',
+        version: 3,
+        rules: [],
+        blocks: [],
+        activeSites: [],
+        inlineSites: [],
+        lists: ['easyprivacy', 'easyprivacy', 'no-such-list', 42],
+        listAllow: ['CDN.test', 'old.test', 'bad host'],
+      }),
+    );
+    expect(r).toEqual({ count: 0, listsToEnable: ['easyprivacy'] });
+    const s = await settingsItem.getValue();
+    expect(s.listAllow).toEqual(['old.test', 'cdn.test']);
+    // Enabling is left to the caller, which downloads the list first.
+    expect(s.lists).toEqual([]);
+  });
+
+  it('does not ask to enable a list that is already on', async () => {
+    await updateSettings((x) => ({ ...x, lists: ['easyprivacy'] }));
+    const r = await importSettings(file({ app: 'aegis', version: 3, rules: [], lists: ['easyprivacy'], listAllow: [] }));
+    expect(r.listsToEnable).toEqual([]);
+  });
+
+  it('a v2 backup leaves lists and overrides untouched', async () => {
+    await updateSettings((x) => ({ ...x, lists: ['easyprivacy'], listAllow: ['keep.test'] }));
+    const r = await importSettings(file({ app: 'aegis', version: 2, rules: [{ domain: 'cdn.test', scope: 'global' }], blocks: [], activeSites: [], inlineSites: [] }));
+    expect(r).toEqual({ count: 1, listsToEnable: [] });
+    const s = await settingsItem.getValue();
+    expect([s.lists, s.listAllow]).toEqual([['easyprivacy'], ['keep.test']]);
   });
 });

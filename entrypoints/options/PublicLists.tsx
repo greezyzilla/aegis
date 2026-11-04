@@ -11,7 +11,7 @@ const fmt = new Intl.NumberFormat('id-ID');
 const fmtDate = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
 
 /** Asks the background to download a list; it enables the list once the download succeeds. */
-function requestRefresh(id: ListId): Promise<ListRefreshResult> {
+export function requestRefresh(id: ListId): Promise<ListRefreshResult> {
   const msg: ListRefreshMessage = { type: LIST_REFRESH, id };
   return browser.runtime.sendMessage(msg) as Promise<ListRefreshResult>;
 }

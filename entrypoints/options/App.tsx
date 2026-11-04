@@ -4,7 +4,8 @@ import { addBlocks, addRules, isAutoReload, removeSite, setAutoReload, setSiteFl
 import { useSettings } from '@/lib/useSettings';
 import { exportSettings, importSettings } from './backup';
 import { BlockTable } from './BlockTable';
-import { PublicLists } from './PublicLists';
+import { LISTS } from '@/lib/lists';
+import { PublicLists, requestRefresh } from './PublicLists';
 import { RuleForm } from './RuleForm';
 import { RuleTable } from './RuleTable';
 import { SiteList } from './SiteList';
@@ -34,8 +35,16 @@ export default function App() {
   const onImport = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const n = await importSettings(file);
-      setStatus({ text: `${n} rule dibaca dan digabung (duplikat dilewati).` });
+      const { count, listsToEnable } = await importSettings(file);
+      let text = `${count} rule dibaca dan digabung (duplikat dilewati).`;
+      let error = false;
+      // Lists come back on only once their data is downloaded again.
+      for (const id of listsToEnable) {
+        const res = await requestRefresh(id).catch((err: Error) => ({ ok: false as const, error: err.message }));
+        text += res.ok ? ` ${LISTS[id].name} diaktifkan.` : ` ${LISTS[id].name} belum aktif: ${res.error}`;
+        error ||= !res.ok;
+      }
+      setStatus({ text, error });
     } catch (err) {
       setStatus({ text: `Import gagal: ${(err as Error).message}`, error: true });
     } finally {

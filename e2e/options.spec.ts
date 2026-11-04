@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import type { Page } from '@playwright/test';
 import { block, DEFAULTS, expect, rule, test } from './fixtures';
 
+const LIST_URL = 'https://easylist.to/easylist/easyprivacy.txt';
+
 async function openOptions(page: Page, extensionId: string) {
   await page.goto(`chrome-extension://${extensionId}/options.html`);
   await page.getByRole('heading', { name: 'Tambah rule izin' }).waitFor();
@@ -202,18 +204,22 @@ test.describe('options page', () => {
       rules: [rule('cdn.test', 'global', 'a.js'), rule('other.test', 'site-a.test')],
       blocks: [block('tracker.test')],
       activeSites: ['news.test'],
-    });
+      lists: ['easyprivacy'],
+      listAllow: ['cdn.test'],
+    }, { easyprivacy: { domains: ['tracker.test'], exceptions: [], updatedAt: 0, skipped: 0 } });
+    // The list is downloaded again on import, not carried in the file.
+    await context.route(LIST_URL, (r) => r.fulfill({ body: Array.from({ length: 1000 }, (_, i) => `||t${i}.example^`).join('\n') }));
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export JSON' }).click()]);
     const file = testInfo.outputPath('backup.json');
     await download.saveAs(file);
-    expect(JSON.parse(await fs.readFile(file, 'utf8'))).toMatchObject({ app: 'aegis', version: 2 });
+    expect(JSON.parse(await fs.readFile(file, 'utf8'))).toMatchObject({ app: 'aegis', version: 3, lists: ['easyprivacy'], listAllow: ['cdn.test'] });
 
     await setSettings({ ...DEFAULTS, activeSites: [] });
     await page.locator('input[type=file]').setInputFiles(file);
-    await expect(page.getByText('3 rule dibaca')).toBeVisible();
+    await expect(page.getByText('3 rule dibaca dan digabung (duplikat dilewati). EasyPrivacy diaktifkan.')).toBeVisible();
     const s = await getSettings();
     expect(s.rules.map((r) => [r.domain, r.scope, r.script])).toEqual([
       ['cdn.test', 'global', 'a.js'],
@@ -221,5 +227,20 @@ test.describe('options page', () => {
     ]);
     expect(s.blocks.map((b) => b.domain)).toEqual(['tracker.test']);
     expect(s.activeSites).toEqual(['news.test']);
+    expect([s.lists, s.listAllow]).toEqual([['easyprivacy'], ['cdn.test']]);
+    await expect(page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  test('importing a backup whose list cannot be downloaded says so and leaves it off', async ({ setSettings, context, extensionId, getSettings }, testInfo) => {
+    await setSettings({ ...DEFAULTS, activeSites: [] });
+    await context.route(LIST_URL, (r) => r.fulfill({ status: 503, body: 'down' }));
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+    const file = testInfo.outputPath('v3.json');
+    await fs.writeFile(file, JSON.stringify({ app: 'aegis', version: 3, rules: [], blocks: [], activeSites: [], inlineSites: [], lists: ['easyprivacy'], listAllow: [] }));
+
+    await page.locator('input[type=file]').setInputFiles(file);
+    await expect(page.getByRole('status').filter({ hasText: 'EasyPrivacy belum aktif: Gagal unduh EasyPrivacy: HTTP 503' })).toBeVisible();
+    expect((await getSettings()).lists).toEqual([]);
   });
 });
