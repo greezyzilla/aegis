@@ -39,6 +39,10 @@
 .site-host {
   font-weight: 600;
 }
+.site-hint {
+  margin: 0;
+  font-size: 12px;
+}
 
 section + section,
 .site + section {
@@ -123,6 +127,13 @@ section + section,
   flex: none;
   color: var(--ok);
   font-size: 12px;
+}
+.pending-block {
+  color: var(--blocked);
+}
+.count-neutral {
+  background: var(--surface);
+  color: var(--muted);
 }
 
 .inline-row .count {

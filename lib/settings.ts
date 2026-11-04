@@ -1,17 +1,25 @@
 import { storage } from '#imports';
 import { hostMatches } from './domain';
-import type { AllowRule, NewRule, ScriptEntry, Settings } from './types';
+import type { AllowRule, BlockRule, NewBlock, NewRule, ScriptEntry, Settings } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
-  enabled: false,
   rules: [],
-  pausedSites: [],
+  blocks: [],
+  activeSites: [],
   inlineSites: [],
 };
+
+/** v1 had a master switch plus paused sites; v2 blocks only on active sites. */
+export function migrateV1(old: Record<string, unknown>): Settings {
+  const { enabled: _enabled, pausedSites: _paused, ...rest } = old;
+  return { ...DEFAULT_SETTINGS, ...(rest as Partial<Settings>) };
+}
 
 // Stored locally: storage.sync caps a single item at 8 KB, which a long rule list outgrows.
 export const settingsItem = storage.defineItem<Settings>('local:settings', {
   fallback: DEFAULT_SETTINGS,
+  version: 2,
+  migrations: { 2: migrateV1 },
 });
 
 export async function updateSettings(fn: (s: Settings) => Settings): Promise<void> {
@@ -46,8 +54,24 @@ export function editRule(id: string, patch: NewRule) {
   }));
 }
 
-export function setEnabled(enabled: boolean) {
-  return updateSettings((s) => ({ ...s, enabled }));
+const blockKey = (b: NewBlock) => `${b.domain}|${b.script ?? ''}`;
+
+export function addBlocks(blocks: NewBlock[]) {
+  return updateSettings((s) => {
+    const existing = new Set(s.blocks.map(blockKey));
+    const added: BlockRule[] = [];
+    for (const b of blocks) {
+      const key = blockKey(b);
+      if (existing.has(key)) continue;
+      existing.add(key);
+      added.push({ domain: b.domain, script: b.script || undefined, id: crypto.randomUUID(), createdAt: Date.now() });
+    }
+    return { ...s, blocks: [...s.blocks, ...added] };
+  });
+}
+
+export function removeBlock(id: string) {
+  return updateSettings((s) => ({ ...s, blocks: s.blocks.filter((b) => b.id !== id) }));
 }
 
 export const isAutoReload = (s: Settings) => s.autoReload !== false;
@@ -56,7 +80,7 @@ export function setAutoReload(autoReload: boolean) {
   return updateSettings((s) => ({ ...s, autoReload }));
 }
 
-type SiteList = 'pausedSites' | 'inlineSites';
+type SiteList = 'activeSites' | 'inlineSites';
 
 /** Adds `site`, or removes every entry covering `host` when turning off. */
 export function setSiteFlag(list: SiteList, host: string, site: string, on: boolean) {
@@ -84,4 +108,8 @@ export function ruleMatches(rule: AllowRule, entry: Pick<ScriptEntry, 'url' | 'h
   if (!rule.script) return true;
   const afterHost = entry.url.slice(entry.url.indexOf(entry.host) + entry.host.length);
   return scriptPatternToRegex(rule.script).test(afterHost);
+}
+
+export function blockMatches(block: BlockRule, entry: Pick<ScriptEntry, 'url' | 'host' | 'initiator'>): boolean {
+  return ruleMatches({ ...block, scope: 'global' }, entry);
 }

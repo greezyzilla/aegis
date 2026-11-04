@@ -64,6 +64,9 @@
   align-items: start;
   gap: 12px;
 }
+.rule-form-noscope {
+  grid-template-columns: 1fr 1fr auto;
+}
 .field {
   display: grid;
   gap: 4px;
@@ -198,4 +201,23 @@
   display: block;
   margin-top: 2px;
   font-size: 12px;
+}
+
+.card .list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.card .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border-top: 1px solid var(--border);
+}
+.card .row > .truncate {
+  flex: 1;
+}
+.card form + .empty {
+  margin-top: 12px;
 }

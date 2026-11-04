@@ -1,13 +1,13 @@
-import { ALL_SCRIPTS, DEFAULTS, expect, rule, test } from './fixtures';
+import { ALL_SCRIPTS, block, DEFAULTS, expect, rule, test } from './fixtures';
 
 test.describe('blocking rules in a real browser', () => {
-  test('fresh install is disabled: everything runs', async ({ visit, ran, getSettings }) => {
-    expect((await getSettings())?.enabled ?? false).toBe(false);
+  test('fresh install has no active site: everything runs', async ({ visit, ran, getSettings }) => {
+    expect((await getSettings())?.activeSites ?? []).toEqual([]);
     const page = await visit('site-a.test');
     expect(await ran(page)).toEqual({ inline: true, loaded: ALL_SCRIPTS('site-a.test') });
   });
 
-  test('enabled with no rules blocks first-party, third-party and inline', async ({ setSettings, visit, ran }) => {
+  test('active site with no rules blocks first-party, third-party and inline', async ({ setSettings, visit, ran }) => {
     await setSettings(DEFAULTS);
     const page = await visit('site-a.test');
     expect(await ran(page)).toEqual({ inline: false, loaded: [] });
@@ -60,16 +60,42 @@ test.describe('blocking rules in a real browser', () => {
     expect(await ran(await visit('site-b.test'))).toEqual({ inline: false, loaded: [] });
   });
 
-  test('pausing a site lets everything run there only', async ({ setSettings, visit, ran }) => {
-    await setSettings({ ...DEFAULTS, pausedSites: ['site-a.test'] });
-    expect(await ran(await visit('site-a.test'))).toEqual({ inline: true, loaded: ALL_SCRIPTS('site-a.test') });
-    expect(await ran(await visit('site-b.test'))).toEqual({ inline: false, loaded: [] });
+  test('only active sites block; every other site runs everything', async ({ setSettings, visit, ran }) => {
+    await setSettings({ ...DEFAULTS, activeSites: ['site-a.test'] });
+    expect(await ran(await visit('site-a.test'))).toEqual({ inline: false, loaded: [] });
+    expect(await ran(await visit('www.site-a.test'))).toEqual({ inline: false, loaded: [] });
+    expect(await ran(await visit('site-b.test'))).toEqual({ inline: true, loaded: ALL_SCRIPTS('site-b.test') });
   });
 
-  test('turning it off removes every rule', async ({ setSettings, visit, ran }) => {
+  test('removing the last active site lets everything run, rules or not', async ({ setSettings, visit, ran }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
-    await setSettings({ ...DEFAULTS, enabled: false, rules: [rule('cdn.test')] });
+    await setSettings({ ...DEFAULTS, activeSites: [], rules: [rule('cdn.test')] });
     expect(await ran(await visit('site-a.test'))).toEqual({ inline: true, loaded: ALL_SCRIPTS('site-a.test') });
+  });
+
+  test('global block applies on inactive and active sites, over allow rules', async ({ setSettings, visit, ran }) => {
+    await setSettings({ ...DEFAULTS, activeSites: ['site-a.test'], rules: [rule('other.test')], blocks: [block('other.test')] });
+    expect(await ran(await visit('site-a.test'))).toEqual({ inline: false, loaded: [] });
+    expect(await ran(await visit('site-b.test'))).toEqual({
+      inline: true,
+      loaded: ALL_SCRIPTS('site-b.test').filter((s) => s !== 'other.test/d.js'),
+    });
+  });
+
+  test('global block with a script name blocks only that file', async ({ setSettings, visit, ran }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('cdn.test', 'b.js')] });
+    expect((await ran(await visit('site-b.test'))).loaded).toEqual(
+      ALL_SCRIPTS('site-b.test').filter((s) => s !== 'cdn.test/lib/b.js'),
+    );
+  });
+
+  test('v1 settings are migrated when the extension loads', async ({ context, extensionId, sw, getSettings }) => {
+    const v1 = { enabled: true, rules: [rule('cdn.test')], pausedSites: ['a.test'], inlineSites: ['b.test'] };
+    await sw.evaluate((v) => chrome.storage.local.set({ settings: v }).then(() => chrome.storage.local.remove('settings$')), v1);
+    // Every extension page runs the migration when it loads the settings item.
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/options.html`);
+    await expect.poll(getSettings).toEqual({ rules: [rule('cdn.test')], blocks: [], activeSites: [], inlineSites: ['b.test'] });
   });
 
   test('rules survive a service worker restart', async ({ setSettings, visit, ran, context, sw }) => {

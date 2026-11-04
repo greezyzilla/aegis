@@ -4,7 +4,9 @@ import type { Settings } from './types';
  * Plain-literal mirror of chrome.declarativeNetRequest.Rule (the generated typings use enums).
  *
  * Priorities:
- *   3  pause site        allowAllRequests on the page -> everything in it loads
+ *   4  global block      blocked everywhere, active site or not
+ *   3  inactive sites    allowAllRequests on every top-level page except active sites ->
+ *                        everything in that tab loads (iframes included), except priority 4
  *   2  allow rules       script origin (+ optional name, + optional site) / inline-allowed sites
  *   1  default           block every script request + CSP header that blocks inline scripts
  */
@@ -20,6 +22,7 @@ export interface DnrRule {
   condition: {
     resourceTypes: ('script' | 'main_frame' | 'sub_frame')[];
     requestDomains?: string[];
+    excludedRequestDomains?: string[];
     initiatorDomains?: string[];
     urlFilter?: string;
   };
@@ -32,8 +35,6 @@ export interface DnrRule {
 export const INLINE_CSP = "script-src * blob: data: 'unsafe-eval' 'wasm-unsafe-eval'";
 
 export function buildDnrRules(s: Settings): DnrRule[] {
-  if (!s.enabled) return [];
-
   const out: DnrRule[] = [];
   const add = (r: Omit<DnrRule, 'id'>) => out.push({ id: out.length + 1, ...r });
 
@@ -63,12 +64,16 @@ export function buildDnrRules(s: Settings): DnrRule[] {
     });
   }
 
-  for (const site of s.pausedSites) {
-    add({
-      priority: 3,
-      action: { type: 'allowAllRequests' },
-      condition: { requestDomains: [site], resourceTypes: ['main_frame', 'sub_frame'] },
-    });
+  // Only the top-level page decides: an iframe inside an active site stays blocked.
+  const inactive: DnrRule['condition'] = { resourceTypes: ['main_frame'] };
+  if (s.activeSites.length) inactive.excludedRequestDomains = s.activeSites;
+  add({ priority: 3, action: { type: 'allowAllRequests' }, condition: inactive });
+
+  for (const block of s.blocks) {
+    const condition: DnrRule['condition'] = { resourceTypes: ['script'] };
+    if (block.script) condition.urlFilter = `||${block.domain}^*${block.script}`;
+    else condition.requestDomains = [block.domain];
+    add({ priority: 4, action: { type: 'block' }, condition });
   }
 
   return out;

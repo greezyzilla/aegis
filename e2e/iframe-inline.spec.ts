@@ -80,6 +80,21 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     await expect(popup.locator('.inline-row', { hasText: 'player.test' }).locator('.count')).toHaveText('2');
   });
 
+  test('an iframe on an active site stays blocked even though its own host is not active', async ({ setSettings, visit, ran }) => {
+    await setSettings({ ...DEFAULTS, activeSites: ['stream.test'] });
+    const page = await visit('stream.test', '/embed');
+    await expect.poll(() => page.frames().some((f) => f.url().includes('player.test'))).toBe(true);
+    await playerFrame(page).waitForLoadState('load');
+    expect((await ran(page)).inline).toBe(false);
+    expect(await ranIn(playerFrame(page))).toEqual({ inline: false, loaded: [] });
+  });
+
+  test('an active host embedded in an inactive page runs everything', async ({ setSettings, visit }) => {
+    await setSettings({ ...DEFAULTS, activeSites: ['player.test'] });
+    const page = await visit('stream.test', '/embed');
+    await expect.poll(() => ranIn(playerFrame(page))).toEqual({ inline: true, loaded: ['cdn.test/lib/a.js'] });
+  });
+
   test('iframes without inline scripts are not listed', async ({ setSettings, visit, openPopup }) => {
     await setSettings({ ...DEFAULTS });
     const page = await visit('site-a.test');

@@ -13,13 +13,24 @@ export interface AllowRule {
 
 export type NewRule = Pick<AllowRule, 'domain' | 'script' | 'scope'>;
 
+/** Script blocked on every site, active or not (trackers and the like). */
+export interface BlockRule {
+  id: string;
+  domain: string;
+  script?: string;
+  createdAt: number;
+}
+
+export type NewBlock = Pick<BlockRule, 'domain' | 'script'>;
+
 export interface Settings {
-  /** Master switch. When off, no rule is installed at all. */
-  enabled: boolean;
+  /** Allow rules. Only matter on active sites; "global" means every active site. */
   rules: AllowRule[];
-  /** Sites where blocking is paused entirely. */
-  pausedSites: string[];
-  /** Sites where inline <script> is allowed. */
+  /** Blocked on every site and outranks allow rules. */
+  blocks: BlockRule[];
+  /** Sites where every script is blocked unless allowed. Elsewhere only `blocks` apply. */
+  activeSites: string[];
+  /** Sites where inline <script> is allowed (on active sites). */
   inlineSites: string[];
   /** Reload the tab when the popup closes after a change. Missing means on. */
   autoReload?: boolean;

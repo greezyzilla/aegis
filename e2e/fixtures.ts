@@ -2,7 +2,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { chromium, test as base, expect, type BrowserContext, type Page, type Worker } from '@playwright/test';
-import type { AllowRule, Settings, TabState } from '../lib/types';
+import type { AllowRule, BlockRule, Settings, TabState } from '../lib/types';
 
 const EXTENSION_PATH = path.resolve(import.meta.dirname, '../dist/chrome-mv3');
 
@@ -67,13 +67,21 @@ export const ALL_SCRIPTS = (site: string) => [
   'sub.cdn.test/c.js',
 ];
 
-export const DEFAULTS: Settings = { enabled: true, rules: [], pausedSites: [], inlineSites: [] };
+/** Blocking on: "test" makes every *.test site active. */
+export const DEFAULTS: Settings = { rules: [], blocks: [], activeSites: ['test'], inlineSites: [] };
 
 export const rule = (domain: string, scope = 'global', script?: string): AllowRule => ({
   id: `${domain}|${script ?? ''}|${scope}`,
   domain,
   script,
   scope,
+  createdAt: 0,
+});
+
+export const block = (domain: string, script?: string): BlockRule => ({
+  id: `${domain}|${script ?? ''}`,
+  domain,
+  script,
   createdAt: 0,
 });
 
@@ -131,7 +139,7 @@ export const test = base.extend<Fixtures, { port: number }>({
   setSettings: async ({ sw }, use) => {
     await use(async (s) => {
       await sw.evaluate((settings) => chrome.storage.local.set({ settings }), s);
-      const expected = !s.enabled ? 0 : 2 + s.rules.length + s.inlineSites.length + s.pausedSites.length;
+      const expected = 3 + s.rules.length + s.inlineSites.length + s.blocks.length;
       await expect
         .poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length))
         .toBe(expected);

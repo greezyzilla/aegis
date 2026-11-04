@@ -28,28 +28,43 @@ describe('importSettings', () => {
           { domain: 'ok.test', script: 'ñ.js', scope: 'global' },
           null,
         ],
-        pausedSites: ['News.test', 'bad site'],
+        blocks: [{ domain: 'Tracker.test' }, { domain: 'ads.test', script: 'px.js' }, { domain: 'bad domain' }],
+        activeSites: ['News.test', 'bad site'],
         inlineSites: 'not-an-array',
       }),
     );
-    expect(n).toBe(2);
+    expect(n).toBe(4);
     const s = await settingsItem.getValue();
     expect(s.rules.map(({ domain, script, scope }) => ({ domain, script, scope }))).toEqual([
       { domain: 'cdn.test', script: undefined, scope: 'global' },
       { domain: 'cdn.test', script: 'a.js', scope: 'www.site.test' },
     ]);
-    expect(s.pausedSites).toEqual(['news.test']);
+    expect(s.blocks.map(({ domain, script }) => ({ domain, script }))).toEqual([
+      { domain: 'tracker.test', script: undefined },
+      { domain: 'ads.test', script: 'px.js' },
+    ]);
+    expect(s.activeSites).toEqual(['news.test']);
     expect(s.inlineSites).toEqual([]);
   });
 
   it('merges into existing settings without duplicates', async () => {
     await addRules([{ domain: 'cdn.test', scope: 'global' }]);
-    await setSiteFlag('pausedSites', 'a.test', 'a.test', true);
+    await setSiteFlag('activeSites', 'a.test', 'a.test', true);
     await importSettings(
-      file({ app: 'aegis', version: 1, rules: [{ domain: 'cdn.test', scope: 'global' }, { domain: 'new.test', scope: 'global' }], pausedSites: ['a.test', 'b.test'], inlineSites: [] }),
+      file({ app: 'aegis', version: 2, rules: [{ domain: 'cdn.test', scope: 'global' }, { domain: 'new.test', scope: 'global' }], blocks: [], activeSites: ['a.test', 'b.test'], inlineSites: [] }),
     );
     const s = await settingsItem.getValue();
     expect(s.rules.map((r) => r.domain)).toEqual(['cdn.test', 'new.test']);
-    expect(s.pausedSites).toEqual(['a.test', 'b.test']);
+    expect(s.activeSites).toEqual(['a.test', 'b.test']);
+  });
+
+  it('still reads a v1 backup, ignoring its paused sites', async () => {
+    const n = await importSettings(
+      file({ app: 'aegis', version: 1, rules: [{ domain: 'cdn.test', scope: 'global' }], pausedSites: ['a.test'], inlineSites: ['b.test'] }),
+    );
+    expect(n).toBe(1);
+    const s = await settingsItem.getValue();
+    expect(s.activeSites).toEqual([]);
+    expect(s.inlineSites).toEqual(['b.test']);
   });
 });

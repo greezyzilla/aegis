@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
-import { addRules, isAutoReload, removeSite, setAutoReload, setEnabled } from '@/lib/settings';
+import { BlockRules } from '@/components/BlockRules';
+import { addBlocks, addRules, isAutoReload, removeBlock, removeSite, setAutoReload } from '@/lib/settings';
 import { useSettings } from '@/lib/useSettings';
 import { exportSettings, importSettings } from './backup';
 import { RuleForm } from './RuleForm';
@@ -47,12 +48,10 @@ export default function App() {
         <div>
           <h1>Aegis</h1>
           <p className="muted">
-            Kalau aktif, semua script keblok. Rule di bawah nentuin script mana yang boleh lolos.
+            Di situs aktif semua script keblok, rule izin nentuin mana yang boleh lolos. Blok global berlaku di semua
+            situs.
           </p>
         </div>
-        <Switch checked={settings.enabled} onChange={(v) => void setEnabled(v)} label="Aktifkan blokir script">
-          <span>{settings.enabled ? 'Aktif' : 'Mati'}</span>
-        </Switch>
       </header>
 
       <section className="card">
@@ -69,7 +68,7 @@ export default function App() {
       </section>
 
       <section className="card">
-        <h2>Tambah rule</h2>
+        <h2>Tambah rule izin</h2>
         <RuleForm submitLabel="Tambah" onSubmit={(r) => addRules([r])} />
         <p className="muted hint">
           Domain ikut nge-cover subdomain-nya (<span className="mono">example.com</span> →{' '}
@@ -81,7 +80,7 @@ export default function App() {
       <section className="card">
         <div className="card-head">
           <h2>
-            Rule <span className="muted">({settings.rules.length})</span>
+            Rule izin <span className="muted">({settings.rules.length})</span>
           </h2>
           <div className="filters">
             <input
@@ -114,12 +113,29 @@ export default function App() {
         />
       </section>
 
+      <section className="card">
+        <h2>
+          Blok global <span className="muted">({settings.blocks.length})</span>
+        </h2>
+        <p className="muted">Diblok di semua situs, aktif atau nggak, dan menang lawan rule izin.</p>
+        <RuleForm
+          submitLabel="Blok"
+          withScope={false}
+          onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
+        />
+        <BlockRules
+          blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))}
+          emptyText="Belum ada blok global."
+          onRemove={(id) => void removeBlock(id)}
+        />
+      </section>
+
       <div className="grid-2">
         <SiteList
-          title="Situs dijeda"
-          description="Blokir mati total di situs ini."
-          sites={settings.pausedSites}
-          onRemove={(s) => void removeSite('pausedSites', s)}
+          title="Situs aktif"
+          description="Semua script keblok di sini, kecuali yang diizinkan."
+          sites={settings.activeSites}
+          onRemove={(s) => void removeSite('activeSites', s)}
         />
         <SiteList
           title="Inline script diizinkan"

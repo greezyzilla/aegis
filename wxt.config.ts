@@ -6,7 +6,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
     name: 'Aegis',
-    description: 'Blok semua script, lalu izinkan per domain (global atau per situs).',
+    description: 'Blok script di situs yang kamu aktifkan, plus blok global untuk tracker dkk.',
     permissions: ['declarativeNetRequest', 'webRequest', 'storage', 'tabs'],
     host_permissions: ['<all_urls>'],
   },

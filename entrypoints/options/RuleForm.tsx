@@ -7,11 +7,13 @@ interface Props {
   submitLabel: string;
   onSubmit: (rule: NewRule) => void | Promise<void>;
   onCancel?: () => void;
+  /** Hide "Berlaku di" (global blocks have no scope; submitted as global). */
+  withScope?: boolean;
 }
 
 type Errors = Partial<Record<'domain' | 'script' | 'site', string>>;
 
-export function RuleForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
+export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope = true }: Props) {
   const id = useId();
   const [domain, setDomain] = useState(initial?.domain ?? '');
   const [script, setScript] = useState(initial?.script ?? '');
@@ -51,7 +53,7 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
     );
 
   return (
-    <form className="rule-form" onSubmit={submit} noValidate>
+    <form className={withScope ? 'rule-form' : 'rule-form rule-form-noscope'} onSubmit={submit} noValidate>
       <div className="field">
         <label htmlFor={`${id}-domain`}>Domain script</label>
         <input
@@ -78,32 +80,34 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
         />
         {error('script')}
       </div>
-      <div className="field">
-        <label htmlFor={`${id}-scope`}>Berlaku di</label>
-        <div className="scope-input">
-          <select
-            id={`${id}-scope`}
-            className="input"
-            value={isGlobal ? 'global' : 'site'}
-            onChange={(e) => setIsGlobal(e.target.value === 'global')}
-          >
-            <option value="global">Semua situs</option>
-            <option value="site">Situs tertentu</option>
-          </select>
-          {!isGlobal && (
-            <input
-              {...field('site')}
-              aria-label="Situs"
-              className="input mono"
-              value={site}
-              onChange={(e) => setSite(e.target.value)}
-              placeholder="github.com"
-              autoComplete="off"
-            />
-          )}
+      {withScope && (
+        <div className="field">
+          <label htmlFor={`${id}-scope`}>Berlaku di</label>
+          <div className="scope-input">
+            <select
+              id={`${id}-scope`}
+              className="input"
+              value={isGlobal ? 'global' : 'site'}
+              onChange={(e) => setIsGlobal(e.target.value === 'global')}
+            >
+              <option value="global">Semua situs</option>
+              <option value="site">Situs tertentu</option>
+            </select>
+            {!isGlobal && (
+              <input
+                {...field('site')}
+                aria-label="Situs"
+                className="input mono"
+                value={site}
+                onChange={(e) => setSite(e.target.value)}
+                placeholder="github.com"
+                autoComplete="off"
+              />
+            )}
+          </div>
+          {error('site')}
         </div>
-        {error('site')}
-      </div>
+      )}
       <div className="form-actions">
         <button type="submit" className="btn btn-primary">
           {submitLabel}

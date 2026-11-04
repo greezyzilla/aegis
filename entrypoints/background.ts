@@ -23,8 +23,6 @@ export default defineBackground(() => {
         });
         await storage.removeItem(syncErrorKey);
         await browser.action.setBadgeBackgroundColor({ color: '#9f1d1d' });
-        await browser.action.setTitle({ title: settings.enabled ? 'Aegis: aktif' : 'Aegis: mati' });
-        if (!settings.enabled) clearAllTabs();
       } catch (err) {
         console.error('[aegis] failed to sync rules', err);
         await storage.setItem(syncErrorKey, String(err));
@@ -83,10 +81,6 @@ export default defineBackground(() => {
     tabs.delete(tabId);
     void storage.removeItem(tabStateKey(tabId));
   };
-
-  function clearAllTabs() {
-    for (const tabId of tabs.keys()) resetTab(tabId);
-  }
 
   // Service worker may wake up mid-page: continue from what was persisted.
   const loading = new Map<number, Promise<TabState>>();

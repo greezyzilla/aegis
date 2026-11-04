@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { DEFAULTS, expect, rule, test } from './fixtures';
+import { ALL_SCRIPTS, block, DEFAULTS, expect, rule, test } from './fixtures';
 
 /** Clicks Reload in the popup and waits for the target tab to finish reloading. */
 async function reloadFromPopup(popup: Page, target: Page) {
@@ -38,7 +38,8 @@ test.describe('popup', () => {
     const cdn = ['cdn.test/lib/a.js', 'cdn.test/lib/b.js', 'sub.cdn.test/c.js'];
     expect((await ran(site)).loaded).toEqual(cdn);
     expect((await ran(await visit('elsewhere.test'))).loaded).toEqual(cdn);
-    await expect(popup.getByRole('button', { name: /^cdn\.test \d/ })).toHaveCount(0);
+    // Still listed under "Script jalan", but no longer as blocked.
+    await expect(popup.getByRole('region', { name: /Keblok di halaman ini/ }).getByRole('button', { name: /^cdn\.test \d/ })).toHaveCount(0);
     await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toContainText('Global');
   });
 
@@ -60,8 +61,8 @@ test.describe('popup', () => {
     expect((await ran(await visit('elsewhere.test'))).loaded).toEqual([]);
   });
 
-  test('pause and inline toggles apply to the current site', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
-    await setSettings(DEFAULTS);
+  test('active and inline toggles apply to the current site', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+    await setSettings({ ...DEFAULTS, activeSites: ['shop.test'] });
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
@@ -70,13 +71,16 @@ test.describe('popup', () => {
     await reloadFromPopup(popup, site);
     expect(await ran(site)).toEqual({ inline: true, loaded: [] });
 
-    await popup.getByRole('switch', { name: 'Jeda blokir di shop.test' }).click();
-    await expect(popup.getByRole('switch', { name: 'Jeda blokir di shop.test' })).toHaveAttribute('aria-checked', 'true');
-    await expect(popup.getByRole('switch', { name: 'Izinkan inline script di shop.test' })).toBeDisabled();
+    const active = popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' });
+    await active.click();
+    await expect(active).toHaveAttribute('aria-checked', 'false');
+    await expect(popup.getByRole('switch', { name: 'Izinkan inline script di shop.test' })).toHaveCount(0);
+    await expect.poll(async () => (await getSettings()).activeSites).toEqual([]);
     await reloadFromPopup(popup, site);
     expect((await ran(site)).loaded).toHaveLength(5);
 
-    await popup.getByRole('switch', { name: 'Jeda blokir di shop.test' }).click();
+    await active.click();
+    await expect.poll(async () => (await getSettings()).activeSites).toEqual(['shop.test']);
     await reloadFromPopup(popup, site);
     expect(await ran(site)).toEqual({ inline: true, loaded: [] });
   });
@@ -93,20 +97,37 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toEqual([]);
   });
 
-  test('master switch turns blocking off and on', async ({ setSettings, visit, openPopup, ran }) => {
-    await setSettings(DEFAULTS);
+  test('inactive site: only "Script jalan", and a script can be blocked on every site', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [] });
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await popup.getByRole('switch', { name: 'Aktifkan blokir script' }).click();
-    await expect(popup.getByText(/Blokir script lagi mati/)).toBeVisible();
-    await reloadFromPopup(popup, site);
-    expect(await ran(site)).toMatchObject({ inline: true });
-    expect((await ran(site)).loaded).toHaveLength(5);
+    await expect(popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' })).toHaveAttribute('aria-checked', 'false');
+    await expect(popup.getByRole('heading', { name: /Keblok di halaman ini/ })).toHaveCount(0);
+    await expect(popup.getByText('Belum ada blok global yang kena di halaman ini.')).toBeVisible();
 
-    await popup.getByRole('switch', { name: 'Aktifkan blokir script' }).click();
+    await popup.getByRole('button', { name: 'Blok other.test di semua situs' }).click();
+    await expect.poll(async () => (await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['other.test', undefined]]);
+    await expect(popup.locator('.loaded-host', { hasText: 'other.test' })).toContainText('diblok');
     await reloadFromPopup(popup, site);
-    expect(await ran(site)).toEqual({ inline: false, loaded: [] });
+
+    const withoutOther = ALL_SCRIPTS('shop.test').map((s) => s.replace('shop.test', 'www.shop.test')).filter((s) => s !== 'other.test/d.js');
+    expect((await ran(site)).loaded).toEqual(withoutOther.sort());
+    await expect(popup.locator('.block-rule', { hasText: 'other.test' })).toContainText('1 keblok');
+
+    await popup.getByRole('button', { name: 'Hapus blok other.test' }).click();
+    await reloadFromPopup(popup, site);
+    expect((await ran(site)).loaded).toHaveLength(5);
+  });
+
+  test('globally blocked scripts on an active site are not offered for allowing', async ({ setSettings, visit, openPopup }) => {
+    await setSettings({ ...DEFAULTS, blocks: [block('other.test')] });
+    const site = await visit('www.shop.test');
+    const popup = await openPopup(site);
+
+    await expect(popup.getByRole('button', { name: /^cdn\.test 2$/ })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /^other\.test \d/ })).toHaveCount(0);
+    await expect(popup.locator('.block-rule', { hasText: 'other.test' })).toContainText('1 keblok');
   });
 
   test('non-http pages show a notice instead of site controls', async ({ setSettings, context, openPopup }) => {

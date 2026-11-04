@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildDnrRules, INLINE_CSP } from '@/lib/rules';
-import type { AllowRule, Settings } from '@/lib/types';
+import type { AllowRule, BlockRule, Settings } from '@/lib/types';
 
-const base: Settings = { enabled: true, rules: [], pausedSites: [], inlineSites: [] };
+const base: Settings = { rules: [], blocks: [], activeSites: [], inlineSites: [] };
 const rule = (r: Partial<AllowRule> & Pick<AllowRule, 'domain'>): AllowRule => ({
   id: r.domain,
   scope: 'global',
@@ -11,12 +11,23 @@ const rule = (r: Partial<AllowRule> & Pick<AllowRule, 'domain'>): AllowRule => (
 });
 
 describe('buildDnrRules', () => {
-  it('installs nothing when disabled, even with rules', () => {
-    expect(buildDnrRules({ ...base, enabled: false, rules: [rule({ domain: 'a.com' })], pausedSites: ['b.com'] })).toEqual([]);
+  it('with no active site, every page is exempt from the default block', () => {
+    const rules = buildDnrRules(base);
+    expect(rules.at(-1)).toEqual({
+      id: 3,
+      priority: 3,
+      action: { type: 'allowAllRequests' },
+      condition: { resourceTypes: ['main_frame'] },
+    });
+  });
+
+  it('active sites are excluded from the exemption, on the top-level page only', () => {
+    const exempt = buildDnrRules({ ...base, activeSites: ['a.com', 'b.com'] }).at(-1);
+    expect(exempt?.condition).toEqual({ resourceTypes: ['main_frame'], excludedRequestDomains: ['a.com', 'b.com'] });
   });
 
   it('blocks every script and inline script by default', () => {
-    const rules = buildDnrRules(base);
+    const rules = buildDnrRules(base).slice(0, 2);
     expect(rules).toEqual([
       { id: 1, priority: 1, action: { type: 'block' }, condition: { resourceTypes: ['script'] } },
       {
@@ -69,11 +80,19 @@ describe('buildDnrRules', () => {
     });
   });
 
-  it('paused site uses allowAllRequests above everything else', () => {
-    const rules = buildDnrRules({ ...base, pausedSites: ['news.com'] });
-    const pause = rules.at(-1)!;
-    expect(pause).toMatchObject({ action: { type: 'allowAllRequests' }, condition: { requestDomains: ['news.com'] } });
-    expect(pause.priority).toBeGreaterThan(Math.max(...rules.slice(0, -1).map((r) => r.priority)));
+  it('global blocks outrank the exemption and the allow rules', () => {
+    const block = (b: Partial<BlockRule> & Pick<BlockRule, 'domain'>): BlockRule => ({ id: b.domain, createdAt: 0, ...b });
+    const rules = buildDnrRules({
+      ...base,
+      rules: [rule({ domain: 'tracker.com' })],
+      blocks: [block({ domain: 'tracker.com' }), block({ domain: 'ads.com', script: 'pixel.js' })],
+    });
+    const blocks = rules.filter((r) => r.priority === 4);
+    expect(blocks.map((r) => [r.action.type, r.condition])).toEqual([
+      ['block', { resourceTypes: ['script'], requestDomains: ['tracker.com'] }],
+      ['block', { resourceTypes: ['script'], urlFilter: '||ads.com^*pixel.js' }],
+    ]);
+    expect(Math.max(...rules.filter((r) => r.priority !== 4).map((r) => r.priority))).toBe(3);
   });
 
   it('allow rules outrank the default block', () => {
@@ -87,9 +106,10 @@ describe('buildDnrRules', () => {
     const rules = buildDnrRules({
       ...base,
       rules: [rule({ domain: 'a.com' }), rule({ domain: 'b.com', script: 'x.js', scope: 's.com' })],
+      blocks: [{ id: 'x', domain: 'x.com', createdAt: 0 }],
+      activeSites: ['s.com'],
       inlineSites: ['s.com'],
-      pausedSites: ['p.com'],
     });
-    expect(rules.map((r) => r.id)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(rules.map((r) => r.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 });

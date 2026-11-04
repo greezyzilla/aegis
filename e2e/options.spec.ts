@@ -1,11 +1,11 @@
 import fs from 'node:fs/promises';
 import type { Page } from '@playwright/test';
-import { DEFAULTS, expect, rule, test } from './fixtures';
+import { block, DEFAULTS, expect, rule, test } from './fixtures';
 
 async function openOptions(page: Page, extensionId: string) {
   await page.goto(`chrome-extension://${extensionId}/options.html`);
-  await page.getByRole('heading', { name: 'Tambah rule' }).waitFor();
-  return page.getByRole('heading', { name: 'Tambah rule' }).locator('..');
+  await page.getByRole('heading', { name: 'Tambah rule izin' }).waitFor();
+  return page.getByRole('heading', { name: 'Tambah rule izin' }).locator('..');
 }
 
 test.describe('options page', () => {
@@ -31,7 +31,7 @@ test.describe('options page', () => {
     await form.getByRole('button', { name: 'Tambah' }).click();
 
     await expect(page.getByRole('row', { name: /cdn\.test a\.js Global/ })).toBeVisible();
-    await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length)).toBe(3);
+    await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length)).toBe(4);
     expect((await ran(await visit('site-a.test'))).loaded).toEqual(['cdn.test/lib/a.js']);
   });
 
@@ -92,8 +92,26 @@ test.describe('options page', () => {
     await expect(rows).toContainText('x.test');
   });
 
-  test('paused and inline sites can be removed', async ({ setSettings, context, extensionId, getSettings }) => {
-    await setSettings({ ...DEFAULTS, pausedSites: ['news.test'], inlineSites: ['github.test'] });
+  test('global blocks can be added and removed', async ({ setSettings, context, extensionId, visit, ran, getSettings }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [] });
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+    const card = page.getByRole('heading', { name: /^Blok global/ }).locator('..');
+
+    await expect(card.getByLabel('Berlaku di')).toHaveCount(0);
+    await card.getByLabel('Domain script').fill('https://Other.test/x');
+    await card.getByRole('button', { name: 'Blok' }).click();
+    await expect(card.getByRole('button', { name: 'Hapus blok other.test' })).toBeVisible();
+    expect((await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['other.test', undefined]]);
+    await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).not.toContain('other.test/d.js');
+
+    await card.getByRole('button', { name: 'Hapus blok other.test' }).click();
+    await expect(card.getByText('Belum ada blok global.')).toBeVisible();
+    await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).toContain('other.test/d.js');
+  });
+
+  test('active and inline sites can be removed', async ({ setSettings, context, extensionId, getSettings }) => {
+    await setSettings({ ...DEFAULTS, activeSites: ['news.test'], inlineSites: ['github.test'] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
@@ -101,28 +119,34 @@ test.describe('options page', () => {
     await page.getByRole('button', { name: 'Hapus github.test' }).click();
     await expect.poll(async () => {
       const s = await getSettings();
-      return [s.pausedSites, s.inlineSites];
+      return [s.activeSites, s.inlineSites];
     }).toEqual([[], []]);
   });
 
   test('export then import restores rules into a clean profile', async ({ setSettings, context, extensionId, getSettings }, testInfo) => {
-    await setSettings({ ...DEFAULTS, rules: [rule('cdn.test', 'global', 'a.js'), rule('other.test', 'site-a.test')], pausedSites: ['news.test'] });
+    await setSettings({
+      ...DEFAULTS,
+      rules: [rule('cdn.test', 'global', 'a.js'), rule('other.test', 'site-a.test')],
+      blocks: [block('tracker.test')],
+      activeSites: ['news.test'],
+    });
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export JSON' }).click()]);
     const file = testInfo.outputPath('backup.json');
     await download.saveAs(file);
-    expect(JSON.parse(await fs.readFile(file, 'utf8'))).toMatchObject({ app: 'aegis', version: 1 });
+    expect(JSON.parse(await fs.readFile(file, 'utf8'))).toMatchObject({ app: 'aegis', version: 2 });
 
-    await setSettings(DEFAULTS);
+    await setSettings({ ...DEFAULTS, activeSites: [] });
     await page.locator('input[type=file]').setInputFiles(file);
-    await expect(page.getByText('2 rule dibaca')).toBeVisible();
+    await expect(page.getByText('3 rule dibaca')).toBeVisible();
     const s = await getSettings();
     expect(s.rules.map((r) => [r.domain, r.scope, r.script])).toEqual([
       ['cdn.test', 'global', 'a.js'],
       ['other.test', 'site-a.test', undefined],
     ]);
-    expect(s.pausedSites).toEqual(['news.test']);
+    expect(s.blocks.map((b) => b.domain)).toEqual(['tracker.test']);
+    expect(s.activeSites).toEqual(['news.test']);
   });
 });

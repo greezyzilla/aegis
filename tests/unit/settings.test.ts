@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import {
+  addBlocks,
   addRules,
+  blockMatches,
   DEFAULT_SETTINGS,
   editRule,
+  migrateV1,
+  removeBlock,
   removeRule,
   removeSite,
   ruleMatches,
-  setEnabled,
   setSiteFlag,
   settingsItem,
 } from '@/lib/settings';
@@ -20,14 +23,38 @@ beforeEach(() => {
 });
 
 describe('settings storage', () => {
-  it('starts disabled with nothing configured', async () => {
+  it('starts with no active site and nothing configured', async () => {
     expect(await get()).toEqual(DEFAULT_SETTINGS);
-    expect(DEFAULT_SETTINGS.enabled).toBe(false);
+    expect(DEFAULT_SETTINGS.activeSites).toEqual([]);
   });
 
-  it('setEnabled toggles the master switch', async () => {
-    await setEnabled(true);
-    expect((await get()).enabled).toBe(true);
+  it('migrates v1 settings: drops the master switch and paused sites, keeps the rest', () => {
+    const rules = [{ id: '1', domain: 'cdn.test', scope: 'global', createdAt: 0 }];
+    expect(migrateV1({ enabled: true, rules, pausedSites: ['a.test'], inlineSites: ['b.test'] })).toEqual({
+      rules,
+      blocks: [],
+      activeSites: [],
+      inlineSites: ['b.test'],
+    });
+  });
+});
+
+describe('global blocks', () => {
+  it('adds without duplicates, drops empty script, removes by id', async () => {
+    await addBlocks([{ domain: 'tracker.test', script: '' }, { domain: 'tracker.test' }, { domain: 'ads.test', script: 'px.js' }]);
+    const [a, b] = (await get()).blocks;
+    expect(a).toMatchObject({ domain: 'tracker.test' });
+    expect(a?.script).toBeUndefined();
+    expect(b).toMatchObject({ domain: 'ads.test', script: 'px.js' });
+
+    await removeBlock(a!.id);
+    expect((await get()).blocks.map((x) => x.domain)).toEqual(['ads.test']);
+  });
+
+  it('blockMatches applies on any page', () => {
+    const b = { id: '1', domain: 'tracker.test', createdAt: 0 };
+    expect(blockMatches(b, { url: 'https://x.tracker.test/t.js', host: 'x.tracker.test', initiator: 'anything.test' })).toBe(true);
+    expect(blockMatches(b, { url: 'https://cdn.test/t.js', host: 'cdn.test', initiator: 'anything.test' })).toBe(false);
   });
 });
 
@@ -76,13 +103,13 @@ describe('editRule / removeRule', () => {
 
 describe('site flags', () => {
   it('adds a site once and removes every entry covering the host', async () => {
-    await setSiteFlag('pausedSites', 'www.github.com', 'github.com', true);
-    await setSiteFlag('pausedSites', 'www.github.com', 'github.com', true);
-    expect((await get()).pausedSites).toEqual(['github.com']);
+    await setSiteFlag('activeSites', 'www.github.com', 'github.com', true);
+    await setSiteFlag('activeSites', 'www.github.com', 'github.com', true);
+    expect((await get()).activeSites).toEqual(['github.com']);
 
     // Turning off from a subdomain removes the parent entry that covers it.
-    await setSiteFlag('pausedSites', 'gist.github.com', 'gist.github.com', false);
-    expect((await get()).pausedSites).toEqual([]);
+    await setSiteFlag('activeSites', 'gist.github.com', 'gist.github.com', false);
+    expect((await get()).activeSites).toEqual([]);
   });
 
   it('keeps unrelated sites when turning off', async () => {
