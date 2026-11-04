@@ -14,8 +14,8 @@ const ranIn = (frame: Frame) =>
   });
 
 async function reloadFromPopup(popup: Page, target: Page) {
-  await expect(popup.getByText('Perubahan berlaku setelah reload.')).toBeVisible();
-  await Promise.all([target.waitForEvent('load'), popup.getByRole('button', { name: 'Reload' }).click()]);
+  await expect(popup.getByRole('status').filter({ hasText: /reload/i })).toBeVisible();
+  await Promise.all([target.waitForEvent('load'), popup.getByRole('button', { name: /^Reload/ }).click()]);
 }
 
 test.describe('inline scripts inside a third-party iframe (player case)', () => {

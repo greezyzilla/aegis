@@ -3,7 +3,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
 import { hostFromUrl, hostMatches, normalizeScript, siteOf } from '@/lib/domain';
 import { BlockRules } from '@/components/BlockRules';
-import { addBlocks, addRules, blockMatches, removeBlock, removeRule, ruleMatches, setSiteFlag } from '@/lib/settings';
+import {
+  addBlocks,
+  addRules,
+  badgeCount,
+  blockMatches,
+  isAutoReload,
+  removeBlock,
+  removeRule,
+  ruleMatches,
+  setSiteFlag,
+} from '@/lib/settings';
 import { POPUP_PORT, type PopupPortMessage } from '@/lib/tabs';
 import type { ScriptEntry } from '@/lib/types';
 import { useSettings } from '@/lib/useSettings';
@@ -11,6 +21,7 @@ import { ActiveRules } from './ActiveRules';
 import { BlockedList, type BlockedGroup } from './BlockedList';
 import { InlineList, type InlineRow } from './InlineList';
 import { LoadedList, type LoadedGroup } from './LoadedList';
+import { Section } from './Section';
 import { useActiveTab } from './useActiveTab';
 
 export default function App() {
@@ -62,7 +73,10 @@ export default function App() {
       allowed: inlineAllowed(host),
     }));
 
-    return { active, isAllowed, isBlocked, groups, loadedGroups, pageBlocks, blockedBy, activeRules, loaded, inlineRows };
+    // Same number as the toolbar badge.
+    const blocked = badgeCount(settings, { ...state, page: pageHost });
+
+    return { active, isAllowed, isBlocked, groups, loadedGroups, pageBlocks, blockedBy, activeRules, loaded, blocked, inlineRows };
   }, [settings, pageHost, state]);
 
   const act = (p: Promise<void>) => {
@@ -86,19 +100,104 @@ export default function App() {
 
   return (
     <main className="popup">
-      <header className="popup-header">
-        <h1>Aegis</h1>
-      </header>
+      {!view || !site || !pageHost ? (
+        <>
+          <header className="site">
+            <h1 className="brand">Aegis</h1>
+          </header>
+          {syncError && (
+            <p className="notice notice-error" role="alert">
+              Gagal menerapkan rule: {syncError}
+            </p>
+          )}
+          <p className="empty muted">Halaman ini nggak bisa diatur (bukan http/https).</p>
+        </>
+      ) : (
+        <>
+          <header className="site" aria-label="Pengaturan situs ini">
+            <div className="site-top">
+              <h1 className="brand">Aegis</h1>
+              <span className="site-summary">
+                {view.active
+                  ? `${view.blocked} keblok · ${view.loaded} lolos`
+                  : `${view.blocked} diblok global · ${view.loaded} jalan`}
+              </span>
+            </div>
+            <div className="site-row">
+              <span className="site-host mono truncate" title={pageHost}>
+                {pageHost}
+              </span>
+              <Switch
+                checked={view.active}
+                onChange={(v) => act(setSiteFlag('activeSites', pageHost, site, v))}
+                label={`Aktifkan blokir di ${site}`}
+              >
+                <span className="muted">Aktif di situs ini</span>
+              </Switch>
+            </div>
+            <p className="site-hint muted">
+              {view.active
+                ? 'Semua script keblok, kecuali yang diizinkan.'
+                : 'Script jalan normal, cuma yang diblok global yang keblok.'}
+            </p>
+          </header>
 
-      {syncError && (
-        <p className="notice notice-error" role="alert">
-          Gagal menerapkan rule: {syncError}
-        </p>
+          {syncError && (
+            <p className="notice notice-error" role="alert">
+              Gagal menerapkan rule: {syncError}
+            </p>
+          )}
+
+          {view.active && (
+            <>
+              <Section id="blocked-title" title="Keblok di halaman ini" aside={view.groups.length ? 'Izinkan di' : undefined}>
+                <BlockedList groups={view.groups} isAllowed={view.isAllowed} onAllow={allow} />
+              </Section>
+
+              <Section id="inline-title" title="Inline script">
+                <InlineList
+                  rows={view.inlineRows}
+                  disabled={false}
+                  onToggle={(row, on) => act(setSiteFlag('inlineSites', row.host, row.site, on))}
+                />
+              </Section>
+
+              <Section id="rules-title" title="Diizinkan">
+                <ActiveRules rules={view.activeRules} onRemove={(id) => act(removeRule(id))} />
+              </Section>
+            </>
+          )}
+
+          {/* On an active site these are only the allowed scripts, so keep them folded away. */}
+          <Section
+            id="loaded-title"
+            title="Script jalan"
+            count={view.loaded}
+            collapsible={view.active}
+            defaultOpen={!view.active}
+          >
+            <LoadedList groups={view.loadedGroups} isBlocked={view.isBlocked} onBlock={block} />
+          </Section>
+
+          {(!view.active || view.pageBlocks.length > 0) && (
+            <Section id="global-blocks-title" title="Diblok global">
+              <BlockRules
+                blocks={view.pageBlocks}
+                emptyText="Belum ada blok global yang kena di halaman ini."
+                onRemove={(id) => act(removeBlock(id))}
+                note={(b) => {
+                  const n = view.blockedBy(b);
+                  return n ? `${n} keblok` : 'berlaku setelah reload';
+                }}
+              />
+            </Section>
+          )}
+        </>
       )}
 
       {changed && tab && (
         <div className="notice reload" role="status">
-          <span>Perubahan berlaku setelah reload.</span>
+          <span>{isAutoReload(settings) ? 'Tab di-reload saat ditutup.' : 'Perubahan berlaku setelah reload.'}</span>
           <button
             type="button"
             className="btn btn-primary"
@@ -108,85 +207,9 @@ export default function App() {
               notify({ type: 'reloaded' });
             }}
           >
-            Reload
+            {isAutoReload(settings) ? 'Reload sekarang' : 'Reload'}
           </button>
         </div>
-      )}
-
-      {!view || !site || !pageHost ? (
-        <p className="empty muted">Halaman ini nggak bisa diatur (bukan http/https).</p>
-      ) : (
-        <>
-          <section className="site" aria-label="Pengaturan situs ini">
-            <div className="site-host mono truncate" title={pageHost}>
-              {pageHost}
-            </div>
-            <Switch
-              checked={view.active}
-              onChange={(v) => act(setSiteFlag('activeSites', pageHost, site, v))}
-              label={`Aktifkan blokir di ${site}`}
-            >
-              <span>Aktif di situs ini</span>
-            </Switch>
-            <p className="site-hint muted">
-              {view.active
-                ? 'Semua script keblok, kecuali yang diizinkan.'
-                : 'Script jalan normal, cuma yang diblok global yang keblok.'}
-            </p>
-          </section>
-
-          {view.active && (
-            <>
-              <section aria-labelledby="blocked-title">
-                <h2 id="blocked-title" className="section-title">
-                  Keblok di halaman ini
-                  <span className="muted"> · {view.loaded} lolos</span>
-                </h2>
-                <BlockedList groups={view.groups} isAllowed={view.isAllowed} onAllow={allow} />
-              </section>
-
-              <section aria-labelledby="inline-title">
-                <h2 id="inline-title" className="section-title">
-                  Inline script
-                </h2>
-                <InlineList
-                  rows={view.inlineRows}
-                  disabled={false}
-                  onToggle={(row, on) => act(setSiteFlag('inlineSites', row.host, row.site, on))}
-                />
-              </section>
-
-              <section aria-labelledby="rules-title">
-                <h2 id="rules-title" className="section-title">
-                  Diizinkan
-                </h2>
-                <ActiveRules rules={view.activeRules} onRemove={(id) => act(removeRule(id))} />
-              </section>
-            </>
-          )}
-
-          <section aria-labelledby="loaded-title">
-            <h2 id="loaded-title" className="section-title">
-              Script jalan
-            </h2>
-            <LoadedList groups={view.loadedGroups} isBlocked={view.isBlocked} onBlock={block} />
-          </section>
-
-          <section aria-labelledby="global-blocks-title">
-            <h2 id="global-blocks-title" className="section-title">
-              Diblok global
-            </h2>
-            <BlockRules
-              blocks={view.pageBlocks}
-              emptyText="Belum ada blok global yang kena di halaman ini."
-              onRemove={(id) => act(removeBlock(id))}
-              note={(b) => {
-                const n = view.blockedBy(b);
-                return n ? `${n} keblok` : 'berlaku setelah reload';
-              }}
-            />
-          </section>
-        </>
       )}
 
       <footer className="popup-footer">

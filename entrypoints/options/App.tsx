@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
-import { BlockRules } from '@/components/BlockRules';
-import { addBlocks, addRules, isAutoReload, removeBlock, removeSite, setAutoReload } from '@/lib/settings';
+import { addBlocks, addRules, isAutoReload, removeSite, setAutoReload, setSiteFlag } from '@/lib/settings';
 import { useSettings } from '@/lib/useSettings';
 import { exportSettings, importSettings } from './backup';
+import { BlockTable } from './BlockTable';
 import { RuleForm } from './RuleForm';
 import { RuleTable } from './RuleTable';
 import { SiteList } from './SiteList';
@@ -54,17 +54,26 @@ export default function App() {
         </div>
       </header>
 
+      <SiteList
+        title="Situs aktif"
+        description="Semua script keblok di sini, kecuali yang diizinkan rule izin."
+        sites={settings.activeSites}
+        onAdd={(site) => setSiteFlag('activeSites', site, site, true)}
+        addLabel="Tambah situs aktif"
+        onRemove={(s) => void removeSite('activeSites', s)}
+      />
+
       <section className="card">
-        <Switch
-          checked={isAutoReload(settings)}
-          onChange={(v) => void setAutoReload(v)}
-          label="Reload otomatis saat popup ditutup"
-        >
-          <span>
-            Reload otomatis saat popup ditutup
-            <span className="muted block">Kalau ada perubahan di popup, tab-nya di-reload sekali.</span>
-          </span>
-        </Switch>
+        <h2>
+          Blok global <span className="muted">({settings.blocks.length})</span>
+        </h2>
+        <p className="muted">Diblok di semua situs, aktif atau nggak, dan menang lawan rule izin.</p>
+        <RuleForm
+          submitLabel="Blok"
+          withScope={false}
+          onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
+        />
+        <BlockTable blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))} />
       </section>
 
       <section className="card">
@@ -113,62 +122,53 @@ export default function App() {
         />
       </section>
 
-      <section className="card">
-        <h2>
-          Blok global <span className="muted">({settings.blocks.length})</span>
-        </h2>
-        <p className="muted">Diblok di semua situs, aktif atau nggak, dan menang lawan rule izin.</p>
-        <RuleForm
-          submitLabel="Blok"
-          withScope={false}
-          onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
-        />
-        <BlockRules
-          blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))}
-          emptyText="Belum ada blok global."
-          onRemove={(id) => void removeBlock(id)}
-        />
-      </section>
+      <SiteList
+        title="Inline script diizinkan"
+        description="Script inline di HTML boleh jalan di situs ini."
+        sites={settings.inlineSites}
+        onRemove={(s) => void removeSite('inlineSites', s)}
+      />
 
       <div className="grid-2">
-        <SiteList
-          title="Situs aktif"
-          description="Semua script keblok di sini, kecuali yang diizinkan."
-          sites={settings.activeSites}
-          onRemove={(s) => void removeSite('activeSites', s)}
-        />
-        <SiteList
-          title="Inline script diizinkan"
-          description="Script inline di HTML boleh jalan di situs ini."
-          sites={settings.inlineSites}
-          onRemove={(s) => void removeSite('inlineSites', s)}
-        />
-      </div>
+        <section className="card">
+          <h2>Pengaturan</h2>
+          <Switch
+            checked={isAutoReload(settings)}
+            onChange={(v) => void setAutoReload(v)}
+            label="Reload otomatis saat popup ditutup"
+          >
+            <span>
+              Reload otomatis saat popup ditutup
+              <span className="muted block">Kalau ada perubahan di popup, tab-nya di-reload sekali.</span>
+            </span>
+          </Switch>
+        </section>
 
-      <section className="card">
-        <h2>Backup</h2>
-        <p className="muted">Import digabung ke rule yang ada, bukan menimpa.</p>
-        <div className="form-actions">
-          <button type="button" className="btn" onClick={() => exportSettings(settings)}>
-            Export JSON
-          </button>
-          <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-            Import JSON
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => void onImport(e.target.files?.[0])}
-          />
-        </div>
-        {status && (
-          <p className={`notice ${status.error ? 'notice-error' : ''}`} role="status">
-            {status.text}
-          </p>
-        )}
-      </section>
+        <section className="card">
+          <h2>Backup</h2>
+          <p className="muted">Import digabung ke rule yang ada, bukan menimpa.</p>
+          <div className="form-actions">
+            <button type="button" className="btn" onClick={() => exportSettings(settings)}>
+              Export JSON
+            </button>
+            <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+              Import JSON
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(e) => void onImport(e.target.files?.[0])}
+            />
+          </div>
+          {status && (
+            <p className={`notice ${status.error ? 'notice-error' : ''}`} role="status">
+              {status.text}
+            </p>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

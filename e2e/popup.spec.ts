@@ -3,8 +3,8 @@ import { ALL_SCRIPTS, block, DEFAULTS, expect, rule, test } from './fixtures';
 
 /** Clicks Reload in the popup and waits for the target tab to finish reloading. */
 async function reloadFromPopup(popup: Page, target: Page) {
-  await expect(popup.getByText('Perubahan berlaku setelah reload.')).toBeVisible();
-  await Promise.all([target.waitForEvent('load'), popup.getByRole('button', { name: 'Reload' }).click()]);
+  await expect(popup.getByRole('status').filter({ hasText: /reload/i })).toBeVisible();
+  await Promise.all([target.waitForEvent('load'), popup.getByRole('button', { name: /^Reload/ }).click()]);
 }
 
 test.describe('popup', () => {
@@ -193,6 +193,7 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toHaveLength(3);
     const popup = await openPopup(site);
 
+    await popup.getByRole('button', { name: /^Script jalan/ }).click();
     await popup.getByRole('button', { name: 'Blok cdn.test di semua situs' }).click();
     await reloadFromPopup(popup, site);
     // The block covers subdomains too, like every domain rule.
@@ -287,7 +288,52 @@ test.describe('popup', () => {
     await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
     await reloadFromPopup(popup, site);
     await popup.getByRole('button', { name: 'Izinkan other.test di semua situs' }).click();
-    await expect(popup.getByText('Perubahan berlaku setelah reload.')).toBeVisible();
+    await expect(popup.getByText('Tab di-reload saat ditutup.')).toBeVisible();
     await Promise.all([site.waitForEvent('load'), popup.close()]);
+  });
+
+  test('header sums up the page like the badge, per mode', async ({ setSettings, visit, openPopup }) => {
+    await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
+    const active = await openPopup(await visit('www.shop.test'));
+    await expect(active.locator('.site-summary')).toHaveText('2 keblok · 3 lolos');
+
+    await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('other.test')] });
+    const inactive = await openPopup(await visit('site-a.test'));
+    await expect(inactive.locator('.site-summary')).toHaveText('1 diblok global · 4 jalan');
+  });
+
+  test('on an active site "Script jalan" starts folded and "Diblok global" hides when empty', async ({ setSettings, visit, openPopup }) => {
+    await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
+    const popup = await openPopup(await visit('www.shop.test'));
+
+    const toggle = popup.getByRole('button', { name: /^Script jalan 3$/ });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(popup.getByRole('button', { name: 'Blok cdn.test di semua situs' })).toHaveCount(0);
+    await toggle.click();
+    await expect(popup.getByRole('button', { name: 'Blok cdn.test di semua situs' })).toBeVisible();
+    await expect(popup.getByRole('heading', { name: 'Diblok global' })).toHaveCount(0);
+    await expect(popup.getByText('Izinkan di')).toBeVisible();
+  });
+
+  test('with auto-reload off the notice asks for a manual reload', async ({ setSettings, visit, openPopup }) => {
+    await setSettings({ ...DEFAULTS, autoReload: false });
+    const site = await visit('www.shop.test');
+    const popup = await openPopup(site);
+
+    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await expect(popup.getByText('Perubahan berlaku setelah reload.')).toBeVisible();
+    await Promise.all([site.waitForEvent('load'), popup.getByRole('button', { name: 'Reload', exact: true }).click()]);
+  });
+
+  test('the reload notice stays in view while the list is scrolled', async ({ setSettings, visit, openPopup }) => {
+    await setSettings(DEFAULTS);
+    const popup = await openPopup(await visit('stream.test', '/embed'));
+    await popup.setViewportSize({ width: 360, height: 600 });
+    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    const notice = popup.locator('.reload');
+    await popup.locator('.popup').evaluate((el) => el.scrollTo(0, 0));
+    const box = await notice.boundingBox();
+    const main = await popup.locator('.popup').boundingBox();
+    expect(box!.y + box!.height).toBeLessThanOrEqual(main!.y + main!.height);
   });
 });

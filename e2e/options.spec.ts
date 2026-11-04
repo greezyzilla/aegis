@@ -126,7 +126,7 @@ test.describe('options page', () => {
     await card.getByLabel('Domain script').fill('ads.test');
     await card.getByLabel('Nama script').fill('pixel.js');
     await card.getByRole('button', { name: 'Blok', exact: true }).click();
-    await expect(card.locator('.block-rule')).toHaveText(/ads\.test\s*\/\s*pixel\.js/);
+    await expect(card.getByRole('row', { name: /ads\.test pixel\.js/ })).toBeVisible();
     expect((await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['ads.test', 'pixel.js']]);
 
     // Same block again is ignored.
@@ -152,6 +152,35 @@ test.describe('options page', () => {
     expect(s.rules.map((r) => r.domain)).toEqual(['cdn.test']);
     expect(s.activeSites).toEqual([]);
     expect(s.inlineSites).toEqual(['b.test']);
+  });
+
+  test('active sites can be added by hand, normalized like the popup', async ({ setSettings, context, extensionId, getSettings, visit, ran }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [] });
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+    const input = page.getByLabel('Tambah situs aktif');
+    const card = input.locator('xpath=ancestor::section[1]');
+
+    await input.fill('not a site');
+    await card.getByRole('button', { name: 'Tambah' }).click();
+    await expect(card.getByText('Situs nggak valid')).toBeVisible();
+    await expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect((await getSettings()).activeSites).toEqual([]);
+
+    await input.fill('https://WWW.Site-A.test/path');
+    await card.getByRole('button', { name: 'Tambah' }).click();
+    await expect(card.getByRole('button', { name: 'Hapus site-a.test' })).toBeVisible();
+    await expect(input).toHaveValue('');
+    expect((await getSettings()).activeSites).toEqual(['site-a.test']);
+    await expect.poll(async () => (await ran(await visit('www.site-a.test'))).loaded).toEqual([]);
+  });
+
+  test('cards follow the model: active sites and global blocks first, settings and backup last', async ({ setSettings, context, extensionId }) => {
+    await setSettings(DEFAULTS);
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+    const titles = (await page.locator('.card > h2').allTextContents()).map((t) => t.replace(/\s*\(\d+\)$/, ''));
+    expect(titles).toEqual(['Situs aktif', 'Blok global', 'Tambah rule izin', 'Inline script diizinkan', 'Pengaturan', 'Backup']);
   });
 
   test('active and inline sites can be removed', async ({ setSettings, context, extensionId, getSettings }) => {

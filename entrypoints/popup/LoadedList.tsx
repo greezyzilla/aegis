@@ -28,7 +28,7 @@ export function LoadedList({ groups, isBlocked, onBlock }: Props) {
 
 function BlockButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" className="btn" onClick={onClick} aria-label={`Blok ${label} di semua situs`}>
+    <button type="button" className="btn btn-block" onClick={onClick} aria-label={`Blok ${label} di semua situs`}>
       Blok global
     </button>
   );

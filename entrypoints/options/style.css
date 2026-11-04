@@ -150,8 +150,8 @@
   background: var(--surface);
 }
 .chip-remove {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: var(--radius-sm);
   background: none;
@@ -203,21 +203,25 @@
   font-size: 12px;
 }
 
-.card .list {
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
+.card form + .empty,
+.card form + .rules,
+.card form + .chips {
+  margin-top: 12px;
 }
-.card .row {
+
+.site-add {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
-  border-top: 1px solid var(--border);
 }
-.card .row > .truncate {
+.site-add .input {
   flex: 1;
+  max-width: 320px;
 }
-.card form + .empty {
-  margin-top: 12px;
+.site-add .btn {
+  height: 30px;
+}
+.site-add .field-error {
+  flex-basis: 100%;
 }
