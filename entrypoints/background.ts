@@ -1,7 +1,7 @@
 import { browser, storage, type Browser } from '#imports';
 import { fileFromUrl, hostFromUrl } from '@/lib/domain';
 import { buildDnrRules } from '@/lib/rules';
-import { badgeCount, isAutoReload, settingsItem } from '@/lib/settings';
+import { badgeCount, DEFAULT_SETTINGS, isAutoReload, settingsItem } from '@/lib/settings';
 import { POPUP_PORT, syncErrorKey, tabStateKey, type PopupPortMessage } from '@/lib/tabs';
 import { emptyTabState, normalizeTabState, type InlineBlockedMessage, type ScriptEntry, type TabState } from '@/lib/types';
 
@@ -52,6 +52,12 @@ export default defineBackground(() => {
     });
   });
 
+  // In memory for the badge, which is recomputed on every recorded script (80+ on news sites).
+  let settingsNow = settingsItem.getValue();
+  settingsItem.watch((next) => {
+    settingsNow = Promise.resolve(next ?? DEFAULT_SETTINGS);
+  });
+
   // ---- Per-tab script log (survives service-worker restarts via storage.session) ----
   const tabs = new Map<number, TabState>();
   const timers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -66,8 +72,7 @@ export default defineBackground(() => {
         if (state) void storage.setItem(tabStateKey(tabId), state);
       }, PERSIST_DELAY_MS),
     );
-    void settingsItem
-      .getValue()
+    void settingsNow
       .then((settings) => {
         const state = tabs.get(tabId);
         const blocked = state ? badgeCount(settings, state) : 0;

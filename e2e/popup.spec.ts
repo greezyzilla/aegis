@@ -356,4 +356,22 @@ test.describe('popup', () => {
     await expect(popup.locator('.site-host')).toHaveText('www.shop.test');
     await expect(popup.locator('.site-summary')).toHaveCount(0);
   });
+
+  test('recording scripts does not read storage for the badge', async ({ setSettings, visit, sw, tabIdOf }) => {
+    await setSettings(DEFAULTS);
+    await visit('www.warmup.test');
+    await sw.evaluate(() => {
+      const g = globalThis as unknown as { reads: number };
+      g.reads = 0;
+      const get = chrome.storage.local.get.bind(chrome.storage.local);
+      chrome.storage.local.get = ((...args: unknown[]) => {
+        g.reads++;
+        return (get as (...a: unknown[]) => unknown)(...args);
+      }) as typeof chrome.storage.local.get;
+    });
+    const site = await visit('www.shop.test');
+    const tabId = await tabIdOf(site);
+    await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('5');
+    expect(await sw.evaluate(() => (globalThis as unknown as { reads: number }).reads)).toBe(0);
+  });
 });
