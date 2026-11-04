@@ -1,5 +1,5 @@
 import type { Frame, Page } from '@playwright/test';
-import { DEFAULTS, expect, rule, test } from './fixtures';
+import { block, DEFAULTS, expect, rule, test } from './fixtures';
 
 const playerFrame = (page: Page): Frame => {
   const f = page.frames().find((fr) => fr.url().includes('player.test'));
@@ -93,6 +93,21 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     await setSettings({ ...DEFAULTS, activeSites: ['player.test'] });
     const page = await visit('stream.test', '/embed');
     await expect.poll(() => ranIn(playerFrame(page))).toEqual({ inline: true, loaded: ['cdn.test/lib/a.js'] });
+  });
+
+  test('a global block applies inside an iframe on an inactive page', async ({ setSettings, visit }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('cdn.test')] });
+    const page = await visit('stream.test', '/embed');
+    await expect.poll(() => page.frames().some((f) => f.url().includes('player.test'))).toBe(true);
+    await playerFrame(page).waitForLoadState('load');
+    expect(await ranIn(playerFrame(page))).toEqual({ inline: true, loaded: [] });
+  });
+
+  test('an inactive page shows no inline controls, even with iframes', async ({ setSettings, visit, openPopup }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [] });
+    const popup = await openPopup(await visit('stream.test', '/embed'));
+    await expect(popup.getByRole('heading', { name: 'Script jalan' })).toBeVisible();
+    await expect(popup.locator('.inline-row')).toHaveCount(0);
   });
 
   test('iframes without inline scripts are not listed', async ({ setSettings, visit, openPopup }) => {

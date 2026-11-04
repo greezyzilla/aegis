@@ -100,7 +100,7 @@ test.describe('options page', () => {
 
     await expect(card.getByLabel('Berlaku di')).toHaveCount(0);
     await card.getByLabel('Domain script').fill('https://Other.test/x');
-    await card.getByRole('button', { name: 'Blok' }).click();
+    await card.getByRole('button', { name: 'Blok', exact: true }).click();
     await expect(card.getByRole('button', { name: 'Hapus blok other.test' })).toBeVisible();
     expect((await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['other.test', undefined]]);
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).not.toContain('other.test/d.js');
@@ -108,6 +108,50 @@ test.describe('options page', () => {
     await card.getByRole('button', { name: 'Hapus blok other.test' }).click();
     await expect(card.getByText('Belum ada blok global.')).toBeVisible();
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).toContain('other.test/d.js');
+  });
+
+  test('global block form validates input and keeps the script name', async ({ setSettings, context, extensionId, getSettings }) => {
+    await setSettings({ ...DEFAULTS, activeSites: [] });
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+    const card = page.getByRole('heading', { name: /^Blok global/ }).locator('..');
+
+    await card.getByLabel('Domain script').fill('not a domain');
+    await card.getByLabel('Nama script').fill('bad name.js');
+    await card.getByRole('button', { name: 'Blok', exact: true }).click();
+    await expect(card.getByText('Domain nggak valid')).toBeVisible();
+    await expect(card.getByText('Hanya karakter ASCII tanpa spasi')).toHaveCount(0); // spaces are stripped, not rejected
+    expect((await getSettings()).blocks).toEqual([]);
+
+    await card.getByLabel('Domain script').fill('ads.test');
+    await card.getByLabel('Nama script').fill('pixel.js');
+    await card.getByRole('button', { name: 'Blok', exact: true }).click();
+    await expect(card.locator('.block-rule')).toHaveText(/ads\.test\s*\/\s*pixel\.js/);
+    expect((await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['ads.test', 'pixel.js']]);
+
+    // Same block again is ignored.
+    await card.getByLabel('Domain script').fill('ads.test');
+    await card.getByLabel('Nama script').fill('pixel.js');
+    await card.getByRole('button', { name: 'Blok', exact: true }).click();
+    await expect(card.locator('.block-rule')).toHaveCount(1);
+  });
+
+  test('a v1 backup imports through the page, ignoring paused sites', async ({ setSettings, context, extensionId, getSettings }, testInfo) => {
+    await setSettings({ ...DEFAULTS, activeSites: [] });
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+    const file = testInfo.outputPath('v1.json');
+    await fs.writeFile(
+      file,
+      JSON.stringify({ app: 'aegis', version: 1, rules: [{ domain: 'cdn.test', scope: 'global' }], pausedSites: ['a.test'], inlineSites: ['b.test'] }),
+    );
+
+    await page.locator('input[type=file]').setInputFiles(file);
+    await expect(page.getByText('1 rule dibaca')).toBeVisible();
+    const s = await getSettings();
+    expect(s.rules.map((r) => r.domain)).toEqual(['cdn.test']);
+    expect(s.activeSites).toEqual([]);
+    expect(s.inlineSites).toEqual(['b.test']);
   });
 
   test('active and inline sites can be removed', async ({ setSettings, context, extensionId, getSettings }) => {
