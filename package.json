@@ -15,7 +15,8 @@
     "postinstall": "wxt prepare",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "wxt build && playwright test"
+    "test:e2e": "wxt build && playwright test",
+    "test:firefox": "wxt build -b firefox && node e2e-firefox/run.mjs dist/firefox-mv3"
   },
   "dependencies": {
     "react": "^19.2.4",

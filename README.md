@@ -22,7 +22,10 @@ npm run build    # output in dist/chrome-mv3
 npm test               # unit (Vitest + WXT fakeBrowser): lib/ and backup import
 npm run test:coverage  # same, with coverage report in coverage/
 npm run test:e2e       # builds, then runs Playwright against real Chromium with the extension loaded
+npm run test:firefox   # builds for Firefox, then runs the same scenarios in real Firefox (headless)
 ```
+
+`test:firefox` needs Firefox 140+ installed (or `FIREFOX_BIN` pointing at its binary) and exits with an error if it is missing. Playwright cannot load extensions in Firefox, so `e2e-firefox/` drives Firefox through Marionette with a throwaway profile, no extra dependencies. It makes no outside network requests unless `AEGIS_FIREFOX_NETWORK=1`, which also checks a real EasyPrivacy download.
 
 The E2E suite maps every `*.test` host to a local server, so it can check per-domain and per-site rules across "different" sites. The popup is opened as a tab whose `tabs.query` points at the page under test, since Playwright cannot click the toolbar icon.
 
@@ -37,7 +40,7 @@ Differences from Chrome:
 
 - Firefox caps dynamic DNR rules at 5,000 (Chrome: 30,000). A public list is still one rule, so this only limits hand-made rules.
 - A request blocked by DNR is reported to `webRequest` as `NS_ERROR_ABORT` instead of `net::ERR_BLOCKED_BY_CLIENT`; the background accepts both.
-- The Playwright suite only drives Chromium (Playwright cannot load extensions in Firefox). Firefox was verified on 159 with a Marionette-driven run of the same scenarios: active and inactive sites, allow rules (global, per site, per script), inline sites, iframes, global blocks, a 47k-domain public list, the popup's script log and badge, and the weekly alarm.
+- The Playwright suite only drives Chromium; `npm run test:firefox` covers Firefox: active and inactive sites, allow rules (global, per site, per script), inline sites, iframes, global blocks, a 47k-domain public list, the popup's script log and badge, and the weekly alarm.
 
 ## How it works
 
