@@ -110,6 +110,30 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     await expect(popup.locator('.inline-row')).toHaveCount(0);
   });
 
+  test('an iframe host added by hand in Options gets its inline scripts back', async ({ setSettings, context, extensionId, getSettings, visit, ran }) => {
+    await setSettings(DEFAULTS);
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/options.html`);
+    const input = page.getByLabel('Tambah situs inline');
+    const card = input.locator('xpath=ancestor::section[1]');
+
+    await input.fill('bad site');
+    await card.getByRole('button', { name: 'Tambah' }).click();
+    await expect(card.getByText('Situs nggak valid')).toBeVisible();
+    expect((await getSettings()).inlineSites).toEqual([]);
+
+    await input.fill('https://WWW.player.test/embed');
+    await card.getByRole('button', { name: 'Tambah' }).click();
+    await expect(card.getByRole('button', { name: 'Hapus player.test' })).toBeVisible();
+    expect((await getSettings()).inlineSites).toEqual(['player.test']);
+
+    const embed = await visit('stream.test', '/embed');
+    await expect.poll(() => embed.frames().some((f) => f.url().includes('player.test'))).toBe(true);
+    await playerFrame(embed).waitForLoadState('load');
+    await expect.poll(async () => (await ranIn(playerFrame(embed))).inline).toBe(true);
+    expect((await ran(embed)).inline).toBe(false); // the page itself stays blocked
+  });
+
   test('iframes without inline scripts are not listed', async ({ setSettings, visit, openPopup }) => {
     await setSettings({ ...DEFAULTS });
     const page = await visit('site-a.test');

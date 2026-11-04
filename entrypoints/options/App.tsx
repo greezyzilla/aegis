@@ -127,8 +127,10 @@ export default function App() {
 
       <SiteList
         title="Inline script diizinkan"
-        description="Script inline di HTML boleh jalan di situs ini."
+        description="Script inline di HTML boleh jalan di situs ini, sebagai halaman atau iframe (mis. player video)."
         sites={settings.inlineSites}
+        onAdd={(site) => setSiteFlag('inlineSites', site, site, true)}
+        addLabel="Tambah situs inline"
         onRemove={(s) => void removeSite('inlineSites', s)}
       />
 
