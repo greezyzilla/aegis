@@ -1,4 +1,4 @@
-import { browser, type Browser } from '#imports';
+import { browser } from '#imports';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
 import { hostFromUrl, hostMatches, normalizeScript, siteOf } from '@/lib/domain';
@@ -15,6 +15,7 @@ import {
   setListAllow,
   setSiteFlag,
 } from '@/lib/settings';
+import { popupPort } from '@/lib/popupPort';
 import { POPUP_PORT, type PopupPortMessage } from '@/lib/tabs';
 import type { ScriptEntry } from '@/lib/types';
 import { useSettings } from '@/lib/useSettings';
@@ -30,13 +31,13 @@ export default function App() {
   const settings = useSettings();
   const { tab, state, syncError } = useActiveTab();
   const [changed, setChanged] = useState(false);
-  const port = useRef<Browser.runtime.Port | null>(null);
+  const port = useRef<ReturnType<typeof popupPort> | null>(null);
 
   useEffect(() => {
-    port.current = browser.runtime.connect({ name: POPUP_PORT });
-    return () => port.current?.disconnect();
+    port.current = popupPort(() => browser.runtime.connect({ name: POPUP_PORT }));
+    return () => port.current?.close();
   }, []);
-  const notify = (msg: PopupPortMessage) => port.current?.postMessage(msg);
+  const notify = (msg: PopupPortMessage) => port.current?.post(msg);
 
   const pageHost = hostFromUrl(tab?.url);
   const site = pageHost ? siteOf(pageHost) : null;
