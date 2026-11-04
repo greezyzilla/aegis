@@ -1,8 +1,8 @@
 import { browser, storage, type Browser } from '#imports';
 import { fileFromUrl, hostFromUrl } from '@/lib/domain';
 import { buildDnrRules } from '@/lib/rules';
-import { settingsItem } from '@/lib/settings';
-import { syncErrorKey, tabStateKey } from '@/lib/tabs';
+import { isAutoReload, settingsItem } from '@/lib/settings';
+import { POPUP_PORT, syncErrorKey, tabStateKey, type PopupPortMessage } from '@/lib/tabs';
 import { emptyTabState, normalizeTabState, type InlineBlockedMessage, type ScriptEntry, type TabState } from '@/lib/types';
 
 const MAX_SCRIPTS_PER_TAB = 300;
@@ -35,6 +35,24 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(syncRules);
   browser.runtime.onStartup.addListener(syncRules);
   settingsItem.watch(syncRules);
+
+  // ---- Auto-reload: the popup reports changes over a port; closing it disconnects the port ----
+  browser.runtime.onConnect.addListener((port) => {
+    if (port.name !== POPUP_PORT) return;
+    let changedTab: number | null = null;
+    port.onMessage.addListener((msg: PopupPortMessage) => {
+      changedTab = msg.type === 'changed' ? msg.tabId : null;
+    });
+    port.onDisconnect.addListener(() => {
+      const tabId = changedTab;
+      if (tabId === null) return;
+      // The storage watch may not have fired yet: sync now so the reload sees the new rules.
+      syncRules();
+      void syncChain.then(async () => {
+        if (isAutoReload(await settingsItem.getValue())) await browser.tabs.reload(tabId).catch(() => {});
+      });
+    });
+  });
 
   // ---- Per-tab script log (survives service-worker restarts via storage.session) ----
   const tabs = new Map<number, TabState>();

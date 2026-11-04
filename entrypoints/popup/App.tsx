@@ -1,8 +1,9 @@
-import { browser } from '#imports';
-import { useMemo, useState } from 'react';
+import { browser, type Browser } from '#imports';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
 import { hostFromUrl, hostMatches, normalizeScript, siteOf } from '@/lib/domain';
 import { addRules, removeRule, ruleMatches, setEnabled, setSiteFlag } from '@/lib/settings';
+import { POPUP_PORT, type PopupPortMessage } from '@/lib/tabs';
 import type { ScriptEntry } from '@/lib/types';
 import { useSettings } from '@/lib/useSettings';
 import { ActiveRules } from './ActiveRules';
@@ -14,6 +15,13 @@ export default function App() {
   const settings = useSettings();
   const { tab, state, syncError } = useActiveTab();
   const [changed, setChanged] = useState(false);
+  const port = useRef<Browser.runtime.Port | null>(null);
+
+  useEffect(() => {
+    port.current = browser.runtime.connect({ name: POPUP_PORT });
+    return () => port.current?.disconnect();
+  }, []);
+  const notify = (msg: PopupPortMessage) => port.current?.postMessage(msg);
 
   const pageHost = hostFromUrl(tab?.url);
   const site = pageHost ? siteOf(pageHost) : null;
@@ -57,7 +65,8 @@ export default function App() {
 
   const act = (p: Promise<void>) => {
     setChanged(true);
-    void p;
+    // Reported once stored, so a reload on popup close never races the write.
+    void p.then(() => tab && notify({ type: 'changed', tabId: tab.id }));
   };
 
   const allow = (entries: ScriptEntry[], host: string, scope: 'site' | 'global', file?: string) => {
@@ -94,6 +103,7 @@ export default function App() {
             onClick={() => {
               void browser.tabs.reload(tab.id);
               setChanged(false);
+              notify({ type: 'reloaded' });
             }}
           >
             Reload

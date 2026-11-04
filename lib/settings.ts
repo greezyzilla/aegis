@@ -50,6 +50,12 @@ export function setEnabled(enabled: boolean) {
   return updateSettings((s) => ({ ...s, enabled }));
 }
 
+export const isAutoReload = (s: Settings) => s.autoReload !== false;
+
+export function setAutoReload(autoReload: boolean) {
+  return updateSettings((s) => ({ ...s, autoReload }));
+}
+
 type SiteList = 'pausedSites' | 'inlineSites';
 
 /** Adds `site`, or removes every entry covering `host` when turning off. */

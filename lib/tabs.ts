@@ -11,3 +11,8 @@ export function getTabState(tabId: number) {
 export function watchTabState(tabId: number, cb: (s: TabState | null) => void) {
   return storage.watch<TabState>(tabStateKey(tabId), cb);
 }
+
+/** Port the popup keeps open; the background reloads its tab on disconnect if something changed. */
+export const POPUP_PORT = 'aegis:popup';
+
+export type PopupPortMessage = { type: 'changed'; tabId: number } | { type: 'reloaded' };

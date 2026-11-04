@@ -21,6 +21,8 @@ export interface Settings {
   pausedSites: string[];
   /** Sites where inline <script> is allowed. */
   inlineSites: string[];
+  /** Reload the tab when the popup closes after a change. Missing means on. */
+  autoReload?: boolean;
 }
 
 export interface ScriptEntry {

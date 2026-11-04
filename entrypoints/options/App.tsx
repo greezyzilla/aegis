@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
-import { addRules, removeSite, setEnabled } from '@/lib/settings';
+import { addRules, isAutoReload, removeSite, setAutoReload, setEnabled } from '@/lib/settings';
 import { useSettings } from '@/lib/useSettings';
 import { exportSettings, importSettings } from './backup';
 import { RuleForm } from './RuleForm';
@@ -54,6 +54,19 @@ export default function App() {
           <span>{settings.enabled ? 'Aktif' : 'Mati'}</span>
         </Switch>
       </header>
+
+      <section className="card">
+        <Switch
+          checked={isAutoReload(settings)}
+          onChange={(v) => void setAutoReload(v)}
+          label="Reload otomatis saat popup ditutup"
+        >
+          <span>
+            Reload otomatis saat popup ditutup
+            <span className="muted block">Kalau ada perubahan di popup, tab-nya di-reload sekali.</span>
+          </span>
+        </Switch>
+      </section>
 
       <section className="card">
         <h2>Tambah rule</h2>

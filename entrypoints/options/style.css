@@ -188,3 +188,14 @@
     width: auto;
   }
 }
+
+.card > .switch-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.block {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}

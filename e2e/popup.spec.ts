@@ -118,4 +118,34 @@ test.describe('popup', () => {
     test.skip(!popup, 'data: tab not visible to tabs.query');
     await expect(popup!.getByText(/nggak bisa diatur/)).toBeVisible();
   });
+
+  test('closing the popup after a change reloads the tab once', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+    await setSettings(DEFAULTS);
+    const site = await visit('www.shop.test');
+    const popup = await openPopup(site);
+
+    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await expect.poll(async () => (await getSettings()).rules.length).toBe(1);
+    await Promise.all([site.waitForEvent('load'), popup.close()]);
+
+    expect((await ran(site)).loaded).toEqual(['cdn.test/lib/a.js', 'cdn.test/lib/b.js', 'sub.cdn.test/c.js']);
+  });
+
+  test('closing the popup without a change, or with auto-reload off, does not reload', async ({ setSettings, visit, openPopup, getSettings }) => {
+    await setSettings(DEFAULTS);
+    const site = await visit('www.shop.test');
+    let loads = 0;
+    site.on('load', () => loads++);
+
+    await (await openPopup(site)).close();
+
+    await setSettings({ ...DEFAULTS, autoReload: false });
+    const popup = await openPopup(site);
+    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await expect.poll(async () => (await getSettings()).rules.length).toBe(1);
+    await popup.close();
+
+    await site.waitForTimeout(1000);
+    expect(loads).toBe(0);
+  });
 });

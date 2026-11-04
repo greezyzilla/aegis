@@ -9,6 +9,18 @@ async function openOptions(page: Page, extensionId: string) {
 }
 
 test.describe('options page', () => {
+  test('auto-reload is on by default and can be turned off', async ({ setSettings, context, extensionId, getSettings }) => {
+    await setSettings(DEFAULTS);
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+
+    const toggle = page.getByRole('switch', { name: 'Reload otomatis saat popup ditutup' });
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(async () => (await getSettings()).autoReload).toBe(false);
+  });
+
   test('adding a rule installs it and lets the script run', async ({ setSettings, context, extensionId, visit, ran, sw }) => {
     await setSettings(DEFAULTS);
     const page = await context.newPage();
