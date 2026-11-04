@@ -96,7 +96,23 @@ export default function App() {
   const block = (host: string, file?: string) =>
     act(addBlocks([{ domain: host, script: file ? normalizeScript(file) : undefined }]));
 
-  if (!settings) return null;
+  // Same shell as popup.html, plus the host once known, until settings are read.
+  if (!settings) {
+    return (
+      <main className="popup">
+        <header className="site">
+          <div className="site-top">
+            <h1 className="brand">Aegis</h1>
+          </div>
+          {pageHost && (
+            <div className="site-row">
+              <span className="site-host mono truncate">{pageHost}</span>
+            </div>
+          )}
+        </header>
+      </main>
+    );
+  }
 
   return (
     <main className="popup">

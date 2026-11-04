@@ -336,4 +336,24 @@ test.describe('popup', () => {
     const main = await popup.locator('.popup').boundingBox();
     expect(box!.y + box!.height).toBeLessThanOrEqual(main!.y + main!.height);
   });
+
+  test('the popup paints its shell and host even while storage reads hang', async ({ setSettings, visit, context, extensionId, tabIdOf }) => {
+    await setSettings(DEFAULTS);
+    const site = await visit('www.shop.test');
+    const tabId = await tabIdOf(site);
+    const popup = await context.newPage();
+    await popup.addInitScript(
+      ([id, url]) => {
+        chrome.tabs.query = (async () => [{ id, url }]) as unknown as typeof chrome.tabs.query;
+        // A browser so busy that storage never answers.
+        chrome.storage.local.get = (() => new Promise(() => {})) as unknown as typeof chrome.storage.local.get;
+        chrome.storage.session.get = (() => new Promise(() => {})) as unknown as typeof chrome.storage.session.get;
+      },
+      [tabId, site.url()] as const,
+    );
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expect(popup.getByRole('heading', { name: 'Aegis' })).toBeVisible();
+    await expect(popup.locator('.site-host')).toHaveText('www.shop.test');
+    await expect(popup.locator('.site-summary')).toHaveCount(0);
+  });
 });
