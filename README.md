@@ -29,6 +29,16 @@ The E2E suite maps every `*.test` host to a local server, so it can check per-do
 Load in Brave: `brave://extensions` → Developer mode → **Load unpacked** → `dist/chrome-mv3`.
 Turn off Brave Shields' own script blocking so the two don't overlap.
 
+### Firefox
+
+Supported as MV3, Firefox 140 or newer (`npm run build:firefox`, output in `dist/firefox-mv3`). Load it from `about:debugging` → This Firefox → **Load Temporary Add-on** → `dist/firefox-mv3/manifest.json`.
+
+Differences from Chrome:
+
+- Firefox caps dynamic DNR rules at 5,000 (Chrome: 30,000). A public list is still one rule, so this only limits hand-made rules.
+- A request blocked by DNR is reported to `webRequest` as `NS_ERROR_ABORT` instead of `net::ERR_BLOCKED_BY_CLIENT`; the background accepts both.
+- The Playwright suite only drives Chromium (Playwright cannot load extensions in Firefox). Firefox was verified on 159 with a Marionette-driven run of the same scenarios: active and inactive sites, allow rules (global, per site, per script), inline sites, iframes, global blocks, a 47k-domain public list, the popup's script log and badge, and the weekly alarm.
+
 ## How it works
 
 All blocking is done with `declarativeNetRequest` dynamic rules, rebuilt from settings on every change (`lib/rules.ts`):

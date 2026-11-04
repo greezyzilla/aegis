@@ -10,6 +10,8 @@ const MAX_SCRIPTS_PER_TAB = 300;
 const MAX_FRAMES_PER_TAB = 50;
 const PERSIST_DELAY_MS = 250;
 const LIST_ALARM = 'aegis:lists';
+/** How a request cancelled by an extension (DNR block) is reported: Chrome, then Firefox. */
+const BLOCKED_ERRORS = new Set(['net::ERR_BLOCKED_BY_CLIENT', 'NS_ERROR_ABORT']);
 const LIST_REFRESH_MINUTES = 7 * 24 * 60;
 
 export default defineBackground(() => {
@@ -236,7 +238,7 @@ export default defineBackground(() => {
 
   browser.webRequest.onErrorOccurred.addListener(
     (d) => {
-      if (d.error === 'net::ERR_BLOCKED_BY_CLIENT') void record(d, true);
+      if (BLOCKED_ERRORS.has(d.error)) void record(d, true);
     },
     { urls: ['<all_urls>'], types: ['script'] },
   );
