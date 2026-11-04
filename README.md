@@ -7,7 +7,7 @@ Browser extension (Brave/Chrome, MV3) that blocks every script by default once e
 ```bash
 npm install
 npm run dev      # opens a Chromium with the extension loaded, with HMR
-npm run build    # output in .output/chrome-mv3
+npm run build    # output in dist/chrome-mv3
 ```
 
 ## Test
@@ -20,7 +20,7 @@ npm run test:e2e       # builds, then runs Playwright against real Chromium with
 
 The E2E suite maps every `*.test` host to a local server, so it can check per-domain and per-site rules across "different" sites. The popup is opened as a tab whose `tabs.query` points at the page under test, since Playwright cannot click the toolbar icon.
 
-Load in Brave: `brave://extensions` → Developer mode → **Load unpacked** → `.output/chrome-mv3`.
+Load in Brave: `brave://extensions` → Developer mode → **Load unpacked** → `dist/chrome-mv3`.
 Turn off Brave Shields' own script blocking so the two don't overlap.
 
 ## How it works

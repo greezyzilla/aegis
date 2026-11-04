@@ -4,7 +4,7 @@ import path from 'node:path';
 import { chromium, test as base, expect, type BrowserContext, type Page, type Worker } from '@playwright/test';
 import type { AllowRule, Settings, TabState } from '../lib/types';
 
-const EXTENSION_PATH = path.resolve(import.meta.dirname, '../.output/chrome-mv3');
+const EXTENSION_PATH = path.resolve(import.meta.dirname, '../dist/chrome-mv3');
 
 /**
  * Every *.test host resolves to a local server. Each page loads:
