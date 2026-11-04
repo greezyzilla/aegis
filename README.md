@@ -3,6 +3,7 @@
 Browser extension (Brave/Chrome, MV3) with two layers:
 
 - **Global blocks**: script domains (optionally a script name) blocked on every site, e.g. trackers.
+- **Public lists**: EasyPrivacy, downloaded from easylist.to when you turn it on in Options and refreshed weekly. Its `||domain^` entries block scripts on every site like a global block; its `@@||domain^` exceptions and the hosts you allow from the popup stay unblocked.
 - **Active sites**: sites you turn on from the popup. There every script is blocked unless an allow rule (per domain, optionally per script name, on all active sites or one site) lets it through, e.g. for sites that inject ads from varying vendors.
 
 Nothing is blocked until you add a global block or activate a site.
@@ -34,7 +35,7 @@ All blocking is done with `declarativeNetRequest` dynamic rules, rebuilt from se
 
 | Priority | Rule |
 |---|---|
-| 4 | Global block: script domain (+ optional `urlFilter` on the script name), on every site |
+| 4 | Global block: script domain (+ optional `urlFilter` on the script name), on every site. Each enabled public list is one rule holding all its domains in `requestDomains` (the 30k dynamic-rule cap counts rules, not domains) |
 | 3 | `allowAllRequests` on every top-level page except active sites (`excludedRequestDomains`), so inactive tabs, iframes included, load everything except priority 4 |
 | 2 | Allow rule: script domain (+ optional `urlFilter` on the script name, + optional `initiatorDomains` for a site scope), or an inline-allowed site |
 | 1 | Block every `script` request, and append a CSP header that drops inline scripts |

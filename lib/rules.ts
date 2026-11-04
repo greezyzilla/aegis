@@ -1,10 +1,11 @@
+import type { ListData } from './lists';
 import type { Settings } from './types';
 
 /**
  * Plain-literal mirror of chrome.declarativeNetRequest.Rule (the generated typings use enums).
  *
  * Priorities:
- *   4  global block      blocked everywhere, active site or not
+ *   4  global block      blocked everywhere, active site or not; also one rule per public list
  *   3  inactive sites    allowAllRequests on every top-level page except active sites ->
  *                        everything in that tab loads (iframes included), except priority 4
  *   2  allow rules       script origin (+ optional name, + optional site) / inline-allowed sites
@@ -34,7 +35,17 @@ export interface DnrRule {
  */
 export const INLINE_CSP = "script-src * blob: data: 'unsafe-eval' 'wasm-unsafe-eval'";
 
-export function buildDnrRules(s: Settings): DnrRule[] {
+/** Downloaded data of each enabled public list, by id. */
+export type ListRules = Record<string, Pick<ListData, 'domains' | 'exceptions'> | null | undefined>;
+
+/** Readable error before the browser rejects the whole update with a generic one. */
+export function checkRuleCount(rules: DnrRule[], max: number): void {
+  if (rules.length > max) {
+    throw new Error(`Terlalu banyak rule: ${rules.length} dari maksimal ${max}. Hapus sebagian rule atau blok global.`);
+  }
+}
+
+export function buildDnrRules(s: Settings, lists: ListRules = {}): DnrRule[] {
   const out: DnrRule[] = [];
   const add = (r: Omit<DnrRule, 'id'>) => out.push({ id: out.length + 1, ...r });
 
@@ -73,6 +84,16 @@ export function buildDnrRules(s: Settings): DnrRule[] {
     const condition: DnrRule['condition'] = { resourceTypes: ['script'] };
     if (block.script) condition.urlFilter = `||${block.domain}^*${block.script}`;
     else condition.requestDomains = [block.domain];
+    add({ priority: 4, action: { type: 'block' }, condition });
+  }
+
+  // One rule holds a whole list: the dynamic-rule cap counts rules, not domains.
+  for (const id of s.lists) {
+    const data = lists[id];
+    if (!data?.domains.length) continue;
+    const condition: DnrRule['condition'] = { resourceTypes: ['script'], requestDomains: data.domains };
+    const excluded = [...new Set([...data.exceptions, ...s.listAllow])];
+    if (excluded.length) condition.excludedRequestDomains = excluded;
     add({ priority: 4, action: { type: 'block' }, condition });
   }
 

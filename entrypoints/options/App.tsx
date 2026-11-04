@@ -4,6 +4,7 @@ import { addBlocks, addRules, isAutoReload, removeSite, setAutoReload, setSiteFl
 import { useSettings } from '@/lib/useSettings';
 import { exportSettings, importSettings } from './backup';
 import { BlockTable } from './BlockTable';
+import { PublicLists } from './PublicLists';
 import { RuleForm } from './RuleForm';
 import { RuleTable } from './RuleTable';
 import { SiteList } from './SiteList';
@@ -75,6 +76,8 @@ export default function App() {
         />
         <BlockTable blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))} />
       </section>
+
+      <PublicLists settings={settings} />
 
       <section className="card">
         <h2>Tambah rule izin</h2>

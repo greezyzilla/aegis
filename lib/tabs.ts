@@ -16,3 +16,13 @@ export function watchTabState(tabId: number, cb: (s: TabState | null) => void) {
 export const POPUP_PORT = 'aegis:popup';
 
 export type PopupPortMessage = { type: 'changed'; tabId: number } | { type: 'reloaded' };
+
+/** Options asks the background to download a public list (and enable it on success). */
+export const LIST_REFRESH = 'aegis:list-refresh';
+
+export interface ListRefreshMessage {
+  type: typeof LIST_REFRESH;
+  id: string;
+}
+
+export type ListRefreshResult = { ok: true } | { ok: false; error: string };

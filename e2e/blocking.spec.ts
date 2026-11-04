@@ -129,6 +129,8 @@ test.describe('blocking rules in a real browser', () => {
       blocks: [],
       activeSites: [],
       inlineSites: ['b.test'],
+      lists: [],
+      listAllow: [],
     });
     expect(await sw2().evaluate(async () => (await chrome.storage.session.get('syncError')).syncError)).toBeUndefined();
     // v1 blocked everywhere; v2 starts with no active site, so nothing is blocked.
@@ -141,7 +143,7 @@ test.describe('blocking rules in a real browser', () => {
     // Every extension page runs the migration when it loads the settings item.
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await expect.poll(getSettings).toEqual({ rules: [rule('cdn.test')], blocks: [], activeSites: [], inlineSites: ['b.test'] });
+    await expect.poll(getSettings).toEqual({ rules: [rule('cdn.test')], blocks: [], activeSites: [], inlineSites: ['b.test'], lists: [], listAllow: [] });
   });
 
   test('rules survive a service worker restart', async ({ setSettings, visit, ran, context, sw }) => {

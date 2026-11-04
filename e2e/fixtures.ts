@@ -2,6 +2,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { chromium, test as base, expect, type BrowserContext, type Page, type Worker } from '@playwright/test';
+import type { ListData } from '../lib/lists';
 import { buildDnrRules } from '../lib/rules';
 import type { AllowRule, BlockRule, Settings, TabState } from '../lib/types';
 
@@ -69,7 +70,7 @@ export const ALL_SCRIPTS = (site: string) => [
 ];
 
 /** Blocking on: "test" makes every *.test site active. */
-export const DEFAULTS: Settings = { rules: [], blocks: [], activeSites: ['test'], inlineSites: [] };
+export const DEFAULTS: Settings = { rules: [], blocks: [], activeSites: ['test'], inlineSites: [], lists: [], listAllow: [] };
 
 export const rule = (domain: string, scope = 'global', script?: string): AllowRule => ({
   id: `${domain}|${script ?? ''}|${scope}`,
@@ -90,8 +91,8 @@ interface Fixtures {
   context: BrowserContext;
   sw: Worker;
   extensionId: string;
-  /** Replaces stored settings and waits until the background has synced the DNR rules. */
-  setSettings: (s: Settings) => Promise<void>;
+  /** Replaces stored settings (and downloaded list data) and waits until the background has synced the DNR rules. */
+  setSettings: (s: Settings, lists?: Record<string, ListData>) => Promise<void>;
   getSettings: () => Promise<Settings>;
   /** Opens http://<host><path> (default /page) and returns the page. */
   visit: (host: string, path?: string) => Promise<Page>;
@@ -138,11 +139,13 @@ export const test = base.extend<Fixtures, { port: number }>({
   },
 
   setSettings: async ({ sw }, use) => {
-    await use(async (s) => {
+    await use(async (s, lists = {}) => {
+      const listItems = Object.fromEntries(Object.entries(lists).map(([id, d]) => [`list:${id}`, d]));
+      if (Object.keys(listItems).length) await sw.evaluate((items) => chrome.storage.local.set(items), listItems);
       await sw.evaluate((settings) => chrome.storage.local.set({ settings }), s);
       // Wait for these exact rules, not just a count: different settings can yield the same number
       // of rules (e.g. a fresh install and one active site), and a page loaded in between mixes both.
-      const expected = buildDnrRules(s);
+      const expected = buildDnrRules(s, lists);
       await expect
         .poll(() => sw.evaluate(async () => chrome.declarativeNetRequest.getDynamicRules()))
         .toMatchObject(expected);

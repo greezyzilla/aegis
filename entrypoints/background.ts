@@ -1,25 +1,34 @@
 import { browser, storage, type Browser } from '#imports';
 import { fileFromUrl, hostFromUrl } from '@/lib/domain';
-import { buildDnrRules } from '@/lib/rules';
-import { badgeCount, DEFAULT_SETTINGS, isAutoReload, settingsItem } from '@/lib/settings';
-import { POPUP_PORT, syncErrorKey, tabStateKey, type PopupPortMessage } from '@/lib/tabs';
+import { downloadList, isListId, LIST_IDS, listDataItem, listErrorItem, listMatcher, type ListId } from '@/lib/lists';
+import { buildDnrRules, checkRuleCount, type ListRules } from '@/lib/rules';
+import { badgeCount, DEFAULT_SETTINGS, isAutoReload, settingsItem, updateSettings } from '@/lib/settings';
+import { LIST_REFRESH, POPUP_PORT, syncErrorKey, tabStateKey, type ListRefreshMessage, type PopupPortMessage } from '@/lib/tabs';
 import { emptyTabState, normalizeTabState, type InlineBlockedMessage, type ScriptEntry, type TabState } from '@/lib/types';
 
 const MAX_SCRIPTS_PER_TAB = 300;
 const MAX_FRAMES_PER_TAB = 50;
 const PERSIST_DELAY_MS = 250;
+const LIST_ALARM = 'aegis:lists';
+const LIST_REFRESH_MINUTES = 7 * 24 * 60;
 
 export default defineBackground(() => {
   // ---- DNR rules: always rebuilt from settings, one sync at a time ----
   let syncChain = Promise.resolve();
+  const readLists = async (ids: string[]): Promise<ListRules> =>
+    Object.fromEntries(
+      await Promise.all(ids.filter(isListId).map(async (id) => [id, await listDataItem(id).getValue()] as const)),
+    );
   const syncRules = () => {
     syncChain = syncChain.then(async () => {
       try {
         const settings = await settingsItem.getValue();
+        const rules = buildDnrRules(settings, await readLists(settings.lists));
+        checkRuleCount(rules, browser.declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_RULES);
         const existing = await browser.declarativeNetRequest.getDynamicRules();
         await browser.declarativeNetRequest.updateDynamicRules({
           removeRuleIds: existing.map((r) => r.id),
-          addRules: buildDnrRules(settings) as unknown as Browser.declarativeNetRequest.Rule[],
+          addRules: rules as unknown as Browser.declarativeNetRequest.Rule[],
         });
         await storage.removeItem(syncErrorKey);
         await browser.action.setBadgeBackgroundColor({ color: '#9f1d1d' });
@@ -33,6 +42,60 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(syncRules);
   browser.runtime.onStartup.addListener(syncRules);
   settingsItem.watch(syncRules);
+  for (const id of LIST_IDS) listDataItem(id).watch(syncRules);
+
+  // ---- Public lists: matchers tag what a list blocked; downloads on request and weekly ----
+  type Matcher = { id: ListId; covers: (host: string) => boolean };
+  const buildMatchers = async (): Promise<Matcher[]> => {
+    const settings = await settingsItem.getValue();
+    const out: Matcher[] = [];
+    for (const id of settings.lists.filter(isListId)) {
+      const data = await listDataItem(id).getValue();
+      if (data) out.push({ id, covers: listMatcher(data, settings.listAllow) });
+    }
+    return out;
+  };
+  let matchers = buildMatchers();
+  const rebuildMatchers = () => {
+    matchers = buildMatchers();
+  };
+  settingsItem.watch(rebuildMatchers);
+  for (const id of LIST_IDS) listDataItem(id).watch(rebuildMatchers);
+
+  const refreshList = async (id: ListId): Promise<void> => {
+    try {
+      await listDataItem(id).setValue(await downloadList(id));
+      await listErrorItem(id).setValue(null);
+    } catch (err) {
+      await listErrorItem(id).setValue((err as Error).message);
+      throw err;
+    }
+  };
+
+  browser.runtime.onMessage.addListener((msg: ListRefreshMessage, _sender, sendResponse) => {
+    if (msg?.type !== LIST_REFRESH || !isListId(msg.id)) return;
+    const id = msg.id;
+    refreshList(id)
+      .then(() => updateSettings((s) => (s.lists.includes(id) ? s : { ...s, lists: [...s.lists, id] })))
+      .then(
+        () => sendResponse({ ok: true }),
+        (err: Error) => sendResponse({ ok: false, error: err.message }),
+      );
+    return true; // async response
+  });
+
+  const ensureAlarm = async () => {
+    if (!(await browser.alarms.get(LIST_ALARM))) {
+      await browser.alarms.create(LIST_ALARM, { periodInMinutes: LIST_REFRESH_MINUTES });
+    }
+  };
+  browser.runtime.onInstalled.addListener(() => void ensureAlarm());
+  browser.runtime.onStartup.addListener(() => void ensureAlarm());
+  browser.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name !== LIST_ALARM) return;
+    const { lists } = await settingsItem.getValue();
+    for (const id of lists.filter(isListId)) await refreshList(id).catch(() => {});
+  });
 
   // ---- Auto-reload: the popup reports changes over a port; closing it disconnects the port ----
   browser.runtime.onConnect.addListener((port) => {
@@ -120,12 +183,14 @@ export default defineBackground(() => {
     if (!host) return;
 
     const state = await getState(details.tabId);
+    const list = blocked ? (await matchers).find((m) => m.covers(host))?.id : undefined;
     const entry: ScriptEntry = {
       url: details.url,
       host,
       file: fileFromUrl(details.url),
       initiator: hostFromUrl(details.initiator) ?? '',
       blocked,
+      ...(list && { list }),
     };
     const i = state.scripts.findIndex((s) => s.url === entry.url && s.initiator === entry.initiator);
     if (i >= 0) state.scripts[i] = entry;

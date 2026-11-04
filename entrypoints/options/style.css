@@ -225,3 +225,40 @@
 .site-add .field-error {
   flex-basis: 100%;
 }
+
+.public-lists {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.public-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.public-list:last-child {
+  border-bottom: 1px solid var(--border);
+}
+.public-list-head,
+.public-list-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.public-list-name {
+  font-weight: 600;
+}
+.public-list-meta {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.public-list .field-error,
+.public-list .block {
+  margin: 0;
+}
+.subhead {
+  margin: 16px 0 8px;
+  font-size: 13px;
+}

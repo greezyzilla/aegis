@@ -12,6 +12,7 @@ import {
   removeBlock,
   removeRule,
   ruleMatches,
+  setListAllow,
   setSiteFlag,
 } from '@/lib/settings';
 import { POPUP_PORT, type PopupPortMessage } from '@/lib/tabs';
@@ -20,6 +21,7 @@ import { useSettings } from '@/lib/useSettings';
 import { ActiveRules } from './ActiveRules';
 import { BlockedList, type BlockedGroup } from './BlockedList';
 import { InlineList, type InlineRow } from './InlineList';
+import { ListHits, type ListHit } from './ListHits';
 import { LoadedList, type LoadedGroup } from './LoadedList';
 import { Section } from './Section';
 import { useActiveTab } from './useActiveTab';
@@ -45,8 +47,10 @@ export default function App() {
     const isAllowed = (e: ScriptEntry) => settings.rules.some((r) => ruleMatches(r, e));
     const isBlocked = (e: ScriptEntry) => settings.blocks.some((b) => blockMatches(b, e));
 
-    // Scripts stopped by a global block are listed under that block, not as allowable.
-    const groups: BlockedGroup[] = groupByHost(state.scripts.filter((e) => e.blocked && !isBlocked(e)));
+    // Scripts stopped by a global block or a public list are listed there, not as allowable:
+    // an allow rule cannot beat them.
+    const groups: BlockedGroup[] = groupByHost(state.scripts.filter((e) => e.blocked && !e.list && !isBlocked(e)));
+    const listHits: ListHit[] = groupByHost(state.scripts.filter((e) => e.blocked && !!e.list));
     const loadedGroups: LoadedGroup[] = groupByHost(state.scripts.filter((e) => !e.blocked));
     const pageBlocks = settings.blocks.filter((b) => state.scripts.some((e) => blockMatches(b, e)));
     const blockedBy = (b: (typeof settings.blocks)[number]) =>
@@ -76,7 +80,20 @@ export default function App() {
     // Same number as the toolbar badge.
     const blocked = badgeCount(settings, { ...state, page: pageHost });
 
-    return { active, isAllowed, isBlocked, groups, loadedGroups, pageBlocks, blockedBy, activeRules, loaded, blocked, inlineRows };
+    return {
+      active,
+      isAllowed,
+      isBlocked,
+      groups,
+      loadedGroups,
+      pageBlocks,
+      blockedBy,
+      listHits,
+      activeRules,
+      loaded,
+      blocked,
+      inlineRows,
+    };
   }, [settings, pageHost, state]);
 
   const act = (p: Promise<void>) => {
@@ -184,6 +201,29 @@ export default function App() {
             </>
           )}
 
+          {(!view.active || view.pageBlocks.length > 0 || view.listHits.length > 0) && (
+            <Section id="global-blocks-title" title="Diblok global">
+              {(view.pageBlocks.length > 0 || view.listHits.length === 0) && (
+                <BlockRules
+                  blocks={view.pageBlocks}
+                  emptyText="Belum ada blok global yang kena di halaman ini."
+                  onRemove={(id) => act(removeBlock(id))}
+                  note={(b) => {
+                    const n = view.blockedBy(b);
+                    return n ? `${n} keblok` : 'berlaku setelah reload';
+                  }}
+                />
+              )}
+              {view.listHits.length > 0 && (
+                <ListHits
+                  hits={view.listHits}
+                  isAllowed={(host) => settings.listAllow.includes(host)}
+                  onAllow={(host) => act(setListAllow(host, true))}
+                />
+              )}
+            </Section>
+          )}
+
           {/* On an active site these are only the allowed scripts, so keep them folded away. */}
           <Section
             id="loaded-title"
@@ -194,20 +234,6 @@ export default function App() {
           >
             <LoadedList groups={view.loadedGroups} isBlocked={view.isBlocked} onBlock={block} />
           </Section>
-
-          {(!view.active || view.pageBlocks.length > 0) && (
-            <Section id="global-blocks-title" title="Diblok global">
-              <BlockRules
-                blocks={view.pageBlocks}
-                emptyText="Belum ada blok global yang kena di halaman ini."
-                onRemove={(id) => act(removeBlock(id))}
-                note={(b) => {
-                  const n = view.blockedBy(b);
-                  return n ? `${n} keblok` : 'berlaku setelah reload';
-                }}
-              />
-            </Section>
-          )}
         </>
       )}
 

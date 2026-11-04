@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildDnrRules, INLINE_CSP } from '@/lib/rules';
+import { buildDnrRules, checkRuleCount, INLINE_CSP } from '@/lib/rules';
 import type { AllowRule, BlockRule, Settings } from '@/lib/types';
 
-const base: Settings = { rules: [], blocks: [], activeSites: [], inlineSites: [] };
+const base: Settings = { rules: [], blocks: [], activeSites: [], inlineSites: [], lists: [], listAllow: [] };
 const rule = (r: Partial<AllowRule> & Pick<AllowRule, 'domain'>): AllowRule => ({
   id: r.domain,
   scope: 'global',
@@ -100,6 +100,30 @@ describe('buildDnrRules', () => {
     const block = rules.find((r) => r.action.type === 'block')!;
     const allow = rules.find((r) => r.action.type === 'allow')!;
     expect(allow.priority).toBeGreaterThan(block.priority);
+  });
+
+  it('an enabled public list becomes one rule, excluding its exceptions and user overrides', () => {
+    const lists = { easyprivacy: { domains: ['t1.com', 't2.com'], exceptions: ['ok.t1.com'] } };
+    const rules = buildDnrRules({ ...base, lists: ['easyprivacy'], listAllow: ['t2.com', 'ok.t1.com'] }, lists);
+    expect(rules.at(-1)).toEqual({
+      id: rules.length,
+      priority: 4,
+      action: { type: 'block' },
+      condition: { resourceTypes: ['script'], requestDomains: ['t1.com', 't2.com'], excludedRequestDomains: ['ok.t1.com', 't2.com'] },
+    });
+  });
+
+  it('a list without data, or not enabled, adds no rule', () => {
+    const lists = { easyprivacy: { domains: ['t1.com'], exceptions: [] } };
+    expect(buildDnrRules({ ...base, lists: [] }, lists)).toHaveLength(3);
+    expect(buildDnrRules({ ...base, lists: ['easyprivacy'] }, {})).toHaveLength(3);
+    expect(buildDnrRules({ ...base, lists: ['easyprivacy'] }, { easyprivacy: null })).toHaveLength(3);
+  });
+
+  it('checkRuleCount explains an overflow instead of letting the browser reject it', () => {
+    const rules = buildDnrRules({ ...base, blocks: Array.from({ length: 5 }, (_, i) => ({ id: `${i}`, domain: `d${i}.com`, createdAt: 0 })) });
+    expect(() => checkRuleCount(rules, rules.length)).not.toThrow();
+    expect(() => checkRuleCount(rules, rules.length - 1)).toThrow(`Terlalu banyak rule: ${rules.length} dari maksimal ${rules.length - 1}`);
   });
 
   it('assigns unique sequential ids', () => {

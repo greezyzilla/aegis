@@ -8,6 +8,7 @@ import {
   DEFAULT_SETTINGS,
   editRule,
   migrateV1,
+  migrateV2,
   removeBlock,
   removeRule,
   removeSite,
@@ -36,7 +37,14 @@ describe('settings storage', () => {
       blocks: [],
       activeSites: [],
       inlineSites: ['b.test'],
+      lists: [],
+      listAllow: [],
     });
+  });
+
+  it('migrates v2 settings: adds empty public lists, keeps the rest', () => {
+    const v2 = { rules: [], blocks: [], activeSites: ['a.test'], inlineSites: [] };
+    expect(migrateV2(v2)).toEqual({ ...v2, lists: [], listAllow: [] });
   });
 });
 
@@ -139,6 +147,11 @@ describe('badgeCount', () => {
 
   it('counts every blocked script on an active page, subdomains included', () => {
     expect(badgeCount({ ...settings, activeSites: ['page.test'] }, state('www.page.test'))).toBe(2);
+  });
+
+  it('counts public-list hits on an inactive page', () => {
+    const listed = { ...entry('list.test', true), list: 'easyprivacy' };
+    expect(badgeCount(settings, { ...state('page.test'), scripts: [...scripts, listed] })).toBe(2);
   });
 
   it('counts every blocked script when the page is unknown', () => {

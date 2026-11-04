@@ -180,7 +180,7 @@ test.describe('options page', () => {
     const page = await context.newPage();
     await openOptions(page, extensionId);
     const titles = (await page.locator('.card > h2').allTextContents()).map((t) => t.replace(/\s*\(\d+\)$/, ''));
-    expect(titles).toEqual(['Situs aktif', 'Blok global', 'Tambah rule izin', 'Inline script diizinkan', 'Pengaturan', 'Backup']);
+    expect(titles).toEqual(['Situs aktif', 'Blok global', 'Daftar publik', 'Tambah rule izin', 'Inline script diizinkan', 'Pengaturan', 'Backup']);
   });
 
   test('active and inline sites can be removed', async ({ setSettings, context, extensionId, getSettings }) => {

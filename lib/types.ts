@@ -32,6 +32,10 @@ export interface Settings {
   activeSites: string[];
   /** Sites where inline <script> is allowed (on active sites). */
   inlineSites: string[];
+  /** Enabled public blocklists, by id (see lib/lists.ts). Their data lives in its own storage key. */
+  lists: string[];
+  /** Hosts the user unblocked from the public lists. */
+  listAllow: string[];
   /** Reload the tab when the popup closes after a change. Missing means on. */
   autoReload?: boolean;
 }
@@ -44,6 +48,8 @@ export interface ScriptEntry {
   /** Host of the document that requested the script (page or iframe). */
   initiator: string;
   blocked: boolean;
+  /** Id of the public list that blocked it, if any. */
+  list?: string;
 }
 
 /** Inline scripts our CSP blocked in one frame host (the page itself or an iframe). */

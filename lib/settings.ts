@@ -1,5 +1,6 @@
 import { storage } from '#imports';
 import { hostMatches } from './domain';
+import { listDataItem, listErrorItem, type ListId } from './lists';
 import type { AllowRule, BlockRule, NewBlock, NewRule, ScriptEntry, Settings, TabState } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -7,6 +8,8 @@ export const DEFAULT_SETTINGS: Settings = {
   blocks: [],
   activeSites: [],
   inlineSites: [],
+  lists: [],
+  listAllow: [],
 };
 
 /** v1 had a master switch plus paused sites; v2 blocks only on active sites. */
@@ -15,11 +18,16 @@ export function migrateV1(old: Record<string, unknown>): Settings {
   return { ...DEFAULT_SETTINGS, ...(rest as Partial<Settings>) };
 }
 
+/** v3 adds public blocklists. */
+export function migrateV2(old: Record<string, unknown>): Settings {
+  return { ...DEFAULT_SETTINGS, ...(old as Partial<Settings>) };
+}
+
 // Stored locally: storage.sync caps a single item at 8 KB, which a long rule list outgrows.
 export const settingsItem = storage.defineItem<Settings>('local:settings', {
   fallback: DEFAULT_SETTINGS,
-  version: 2,
-  migrations: { 2: migrateV1 },
+  version: 3,
+  migrations: { 2: migrateV1, 3: migrateV2 },
 });
 
 export async function updateSettings(fn: (s: Settings) => Settings): Promise<void> {
@@ -70,6 +78,21 @@ export function addBlocks(blocks: NewBlock[]) {
   });
 }
 
+/** Turns a public list off and drops its downloaded data; its DNR rule goes with the next sync. */
+export async function disableList(id: ListId) {
+  await updateSettings((s) => ({ ...s, lists: s.lists.filter((l) => l !== id) }));
+  await listDataItem(id).removeValue();
+  await listErrorItem(id).removeValue();
+}
+
+/** Unblocks a host from every public list (the user's override of the list). */
+export function setListAllow(host: string, on: boolean) {
+  return updateSettings((s) => ({
+    ...s,
+    listAllow: on ? Array.from(new Set([...s.listAllow, host])) : s.listAllow.filter((h) => h !== host),
+  }));
+}
+
 export function removeBlock(id: string) {
   return updateSettings((s) => ({ ...s, blocks: s.blocks.filter((b) => b.id !== id) }));
 }
@@ -117,7 +140,8 @@ export function ruleMatches(rule: AllowRule, entry: Pick<ScriptEntry, 'url' | 'h
 export function badgeCount(s: Settings, state: TabState): number {
   const page = state.page;
   const active = !page || s.activeSites.some((d) => hostMatches(page, d));
-  return state.scripts.filter((e) => e.blocked && (active || s.blocks.some((b) => blockMatches(b, e)))).length;
+  return state.scripts.filter((e) => e.blocked && (active || !!e.list || s.blocks.some((b) => blockMatches(b, e))))
+    .length;
 }
 
 export function blockMatches(block: BlockRule, entry: Pick<ScriptEntry, 'url' | 'host' | 'initiator'>): boolean {
