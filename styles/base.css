@@ -47,6 +47,8 @@
 
 body {
   margin: 0;
+  /* Chrome's extension page stylesheet sets body to 75%; keep the root size. */
+  font-size: inherit;
 }
 
 h1,
