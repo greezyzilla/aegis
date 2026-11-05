@@ -23,11 +23,11 @@ Work on a short-lived branch named `<type>/<short-slug>`, using the commit types
 
 Common scopes: `popup`, `options`, `lists`, `rules`, `backup`, `firefox`, `deps`. Mark a breaking change with `!` (`feat!: ...`) or a `BREAKING CHANGE:` footer. Explain the why in the body.
 
-The PR title follows the same format: the `pr-title` workflow checks it, and it becomes the commit message on `main`.
+The PR title follows the same format: the `pr-title` workflow checks it, and it becomes the commit subject on `main`. The description follows the [template](.github/pull_request_template.md): what changes, why, and how it was tested.
 
 ## Merging
 
-- **Squash merge** is the default: one PR, one commit on `main`, with the PR title as its message.
+- **Squash merge** is the default: one PR, one commit on `main`, with the PR title as its subject and the branch's commit messages as its body. The PR description stays on the PR.
 - **Merge commit** only when the PR's commits must stay separate, for example when a later file refers to one of them by hash (as `.git-blame-ignore-revs` does). Say so in the PR.
 - Rebase merging is disabled, and history on `main` is never rewritten.
 
