@@ -28,7 +28,7 @@ Download the files from the [latest release](https://github.com/greezyzilla/aegi
 
 **Firefox.** Download `aegis-X.Y.Z-firefox.xpi`, then in `about:addons` open the gear menu and choose **Install Add-on From File**. It is signed by Mozilla as an unlisted add-on, so it stays installed after a restart.
 
-Neither build updates itself. To upgrade, install the newer release the same way.
+The Firefox build updates itself: Firefox checks the latest release and installs a newer signed `.xpi` on its own. Copies installed from v0.2.0 or earlier do not know where to look, so install the next release by hand once. The Brave/Chrome build does not update itself: to upgrade, load the newer release the same way.
 
 ## Using it
 

@@ -45,13 +45,21 @@ jobs:
       - run: npm ci
       - run: npm run zip && npm run zip:firefox
       - run: gh release upload "$TAG" dist/aegis-*-chrome.zip dist/aegis-*-firefox.zip
-      - name: Sign the Firefox build on AMO (unlisted) and attach the .xpi
+      - name: Sign the Firefox build on AMO (unlisted) and attach the .xpi and updates.json
         if: env.AMO_CONFIGURED == 'true'
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
         # AMO names the .xpi after its own file id: give it the same name as the zips.
+        # updates.json is what gecko.update_url (releases/latest/download) points installed copies at.
         run: |
           npm run sign:firefox
-          mv dist/signed/*.xpi "dist/aegis-${TAG#v}-firefox.xpi"
-          gh release upload "$TAG" "dist/aegis-${TAG#v}-firefox.xpi"
+          version="${TAG#v}"
+          xpi="dist/aegis-$version-firefox.xpi"
+          mv dist/signed/*.xpi "$xpi"
+          jq -n --arg version "$version" \
+            --arg link "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/aegis-$version-firefox.xpi" \
+            --arg hash "sha256:$(sha256sum "$xpi" | cut -d' ' -f1)" \
+            '{addons: {"aegis@greezyzilla": {updates: [{version: $version, update_link: $link, update_hash: $hash}]}}}' \
+            > dist/updates.json
+          gh release upload "$TAG" "$xpi" dist/updates.json
