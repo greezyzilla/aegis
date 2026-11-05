@@ -1,4 +1,5 @@
 import { useId, useRef } from 'react';
+import { t } from '@/lib/i18n';
 
 /** Icons drawn with currentColor so they follow the text they sit next to. */
 export const Icon = {
@@ -137,8 +138,8 @@ export function SplitAllow({ label, onSite, onGlobal }: { label: string; onSite:
   };
   return (
     <span className="split">
-      <button type="button" className="split-main" onClick={onSite} aria-label={`Izinkan ${label} di situs ini`}>
-        Izinkan
+      <button type="button" className="split-main" onClick={onSite} aria-label={t.allowOnSiteLabel(label)}>
+        {t.allow}
       </button>
       <button
         ref={more}
@@ -146,7 +147,7 @@ export function SplitAllow({ label, onSite, onGlobal }: { label: string; onSite:
         className="split-more"
         popoverTarget={id}
         onClick={place}
-        aria-label={`Pilihan lain untuk ${label}`}
+        aria-label={t.moreFor(label)}
       >
         {Icon.caret}
       </button>
@@ -159,10 +160,10 @@ export function SplitAllow({ label, onSite, onGlobal }: { label: string; onSite:
             menu.current?.hidePopover();
             onGlobal();
           }}
-          aria-label={`Izinkan ${label} di semua situs`}
+          aria-label={t.allowEverywhereLabel(label)}
         >
           {Icon.globe}
-          Izinkan di semua situs
+          {t.allowEverywhere}
         </button>
       </div>
     </span>

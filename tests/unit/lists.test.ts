@@ -10,6 +10,7 @@ import {
   urlFilterRegExp,
 } from '@/lib/lists';
 import { disableList, setListAllow, settingsItem, updateSettings } from '@/lib/settings';
+import { t } from '@/lib/i18n';
 
 beforeEach(() => {
   fakeBrowser.reset();
@@ -210,7 +211,9 @@ describe('downloadList', () => {
 
   it('rejects HTTP errors and suspiciously small lists', async () => {
     await expect(downloadList('easyprivacy', fakeFetch(503, big))).rejects.toThrow('HTTP 503');
-    await expect(downloadList('easyprivacy', fakeFetch(200, '||a.com^'))).rejects.toThrow('cuma berisi 1 domain');
+    await expect(downloadList('easyprivacy', fakeFetch(200, '||a.com^'))).rejects.toThrow(
+      t.listTooSmall('EasyPrivacy', 1),
+    );
   });
 });
 

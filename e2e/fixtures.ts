@@ -126,7 +126,10 @@ export const test = base.extend<Fixtures, { port: number }>({
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
       headless: true,
+      // The suite reads the Indonesian UI; English is covered by the unit tests and screenshots.
+      locale: 'id-ID',
       args: [
+        '--lang=id',
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
         '--host-resolver-rules=MAP *.test 127.0.0.1',

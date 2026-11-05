@@ -11,8 +11,10 @@ export default defineConfig({
     excludeSources: ['backlog/**', 'coverage/**', 'test-results/**', 'playwright-report/**'],
   },
   manifest: ({ browser }) => ({
-    name: 'Aegis',
-    description: 'Blok script di situs yang kamu aktifkan, plus blok global untuk tracker dkk.',
+    // Text in public/_locales; English unless the browser is Indonesian, like the UI (lib/i18n).
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
+    default_locale: 'en',
     permissions: ['declarativeNetRequest', 'webRequest', 'storage', 'tabs', 'alarms'],
     host_permissions: ['<all_urls>'],
     ...(browser === 'firefox' && {

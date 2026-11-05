@@ -34,15 +34,15 @@ Neither build updates itself. To upgrade, install the newer release the same way
 
 Nothing is blocked until you activate a site, add a global block or turn on a list.
 
-Open the popup on a site and turn on the switch at the top. The header turns blue, and from then on every script on that site is blocked, inline ones included. After a reload the popup lists what was blocked, grouped by domain, with the site's own domains first. **Izinkan** allows a domain or a single script on this site; the arrow next to it holds **Izinkan di semua situs** for every active site. Inline scripts are listed per frame, so an embedded player can be allowed without allowing the page around it. With auto-reload on, the default, the tab reloads once when you close the popup.
+Open the popup on a site and turn on the switch at the top. The header turns blue, and from then on every script on that site is blocked, inline ones included. After a reload the popup lists what was blocked, grouped by domain, with the site's own domains first. **Allow** lets a domain or a single script through on this site; the arrow next to it holds **Allow on every site** for every active site. Inline scripts are listed per frame, so an embedded player can be allowed without allowing the page around it. With auto-reload on, the default, the tab reloads once when you close the popup.
 
-On a site that is not active, the popup lists the scripts that ran. **Blok** blocks one on every site, active or not, and a global block wins over allow rules.
+On a site that is not active, the popup lists the scripts that ran. **Block** blocks one on every site, active or not, and a global block wins over allow rules.
 
 The options page holds everything else: allow rules, global blocks, active and inline-allowed sites, EasyPrivacy (downloaded from easylist.to when you turn it on, refreshed weekly) and a JSON export/import of your settings. If EasyPrivacy breaks a site, allow the host from the popup.
 
 ## Limitations
 
-- The interface is in Indonesian only.
+- The interface is in English, or in Indonesian when the browser's language is Indonesian. There is no setting to switch it.
 - It blocks scripts and nothing else: images, iframes and other requests load as usual.
 - Firefox allows 5,000 dynamic blocking rules, Chrome 30,000. EasyPrivacy needs about 8,500, so on Firefox the least script-like path entries are left out. The options page shows how many.
 

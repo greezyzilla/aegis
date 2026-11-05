@@ -6,9 +6,7 @@ import { readAndWatch } from '@/lib/readAndWatch';
 import { disableList, setListAllow } from '@/lib/settings';
 import { LIST_REFRESH, listDroppedKey, type ListRefreshMessage, type ListRefreshResult } from '@/lib/tabs';
 import type { Settings } from '@/lib/types';
-
-const fmt = new Intl.NumberFormat('id-ID');
-const fmtDate = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+import { t } from '@/lib/i18n';
 
 /** Asks the background to download a list; it enables the list once the download succeeds. */
 export function requestRefresh(id: ListId): Promise<ListRefreshResult> {
@@ -19,21 +17,18 @@ export function requestRefresh(id: ListId): Promise<ListRefreshResult> {
 export function PublicLists({ settings }: { settings: Settings }) {
   return (
     <section className="card">
-      <h2>Daftar publik</h2>
-      <p className="muted">
-        Daftar tracker yang dikelola komunitas, diblok di semua situs seperti blok global. Diunduh dari sumbernya dan
-        diperbarui otomatis tiap minggu.
-      </p>
+      <h2>{t.publicListsTitle}</h2>
+      <p className="muted">{t.publicListsDesc}</p>
       <ul className="public-lists" role="list">
         {LIST_IDS.map((id) => (
           <PublicList key={id} id={id} enabled={settings.lists.includes(id)} />
         ))}
       </ul>
       <h3 className="subhead">
-        Diizinkan dari daftar <span className="muted">({settings.listAllow.length})</span>
+        {t.allowedFromList} <span className="muted">({settings.listAllow.length})</span>
       </h3>
       {settings.listAllow.length === 0 ? (
-        <p className="empty muted">Belum ada. Izinkan dari popup kalau daftar bikin situs rusak.</p>
+        <p className="empty muted">{t.noListAllow}</p>
       ) : (
         <ul className="chips" role="list">
           {settings.listAllow.map((h) => (
@@ -43,7 +38,7 @@ export function PublicLists({ settings }: { settings: Settings }) {
                 type="button"
                 className="chip-remove"
                 onClick={() => void setListAllow(h, false)}
-                aria-label={`Blok lagi ${h} dari daftar`}
+                aria-label={t.reblockFromList(h)}
               >
                 ×
               </button>
@@ -106,36 +101,34 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
         <div>
           <span className="public-list-name">{list.name}</span>
           <span className="muted block">
-            {new URL(list.url).host} · lisensi {list.license}
+            {new URL(list.url).host} · {t.license(list.license)}
           </span>
         </div>
         <Switch
           checked={enabled}
           disabled={busy}
           onChange={(on) => void (on ? refresh() : disableList(id))}
-          label={`Aktifkan ${list.name}`}
+          label={t.enableList(list.name)}
         />
       </div>
       {busy && (
         <p className="muted block" role="status">
-          Mengunduh {list.name}…
+          {t.downloading(list.name)}
         </p>
       )}
       {enabled && data && !busy && (
         <div className="public-list-meta">
           <span className="muted">
-            {fmt.format(data.domains.length)} domain · {fmt.format(paths)} path ·{' '}
-            {fmt.format(data.exceptions.length + unblocks)} pengecualian · diperbarui {fmtDate.format(data.updatedAt)}
+            {t.listStats(data.domains.length, paths, data.exceptions.length + unblocks, data.updatedAt)}
           </span>
           <button type="button" className="btn" onClick={() => void refresh()}>
-            Perbarui sekarang
+            {t.refreshNow}
           </button>
         </div>
       )}
       {enabled && data && !busy && !!dropped && (
         <p className="muted block" role="note">
-          {fmt.format(dropped)} path tidak dipakai: browser ini membatasi jumlah rule. Yang paling mirip script tetap
-          dipakai.
+          {t.pathsDropped(dropped)}
         </p>
       )}
       {error && !busy && (

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { importSettings } from '@/entrypoints/options/backup';
 import { addRules, settingsItem, setSiteFlag, updateSettings } from '@/lib/settings';
+import { t } from '@/lib/i18n';
 
 const file = (data: unknown) => new File([typeof data === 'string' ? data : JSON.stringify(data)], 'b.json');
 
@@ -11,7 +12,7 @@ beforeEach(() => {
 
 describe('importSettings', () => {
   it('rejects files that are not an Aegis backup', async () => {
-    await expect(importSettings(file({ rules: [] }))).rejects.toThrow('Bukan file backup Aegis');
+    await expect(importSettings(file({ rules: [] }))).rejects.toThrow(t.notBackup);
     await expect(importSettings(file('{not json'))).rejects.toThrow();
   });
 

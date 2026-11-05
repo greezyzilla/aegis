@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ScriptEntry } from '@/lib/types';
 import { Avatar, Count, HostName, Icon, SplitAllow } from './parts';
+import { t } from '@/lib/i18n';
 
 export interface BlockedGroup {
   host: string;
@@ -18,13 +19,7 @@ interface Props {
 
 export function BlockedList({ groups, isAllowed, isOwn, onAllow, loadedBeforeActive }: Props) {
   if (groups.length === 0) {
-    return (
-      <p className="empty">
-        {loadedBeforeActive
-          ? 'Halaman ini dimuat sebelum blokir aktif. Reload dulu buat lihat script yang keblok.'
-          : 'Belum ada script yang keblok di halaman ini.'}
-      </p>
-    );
+    return <p className="empty">{loadedBeforeActive ? t.loadedBeforeActive : t.noBlocked}</p>;
   }
   return (
     <ul className="group" role="list">
@@ -36,7 +31,7 @@ export function BlockedList({ groups, isAllowed, isOwn, onAllow, loadedBeforeAct
 }
 
 function PendingTag() {
-  return <span className="pending">✓ diizinkan</span>;
+  return <span className="pending">{t.allowedTag}</span>;
 }
 
 function BlockedHost({

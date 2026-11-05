@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDnrRules, checkRuleCount, INLINE_CSP } from '@/lib/rules';
 import type { ListFilter } from '@/lib/lists';
 import type { AllowRule, BlockRule, Settings } from '@/lib/types';
+import { t } from '@/lib/i18n';
 
 /** The rules alone, for the cases that do not hit the rule cap. */
 const build = (...args: Parameters<typeof buildDnrRules>) => buildDnrRules(...args).rules;
@@ -241,7 +242,7 @@ describe('buildDnrRules', () => {
       const cut = buildDnrRules(on, list([{ url: '/a.js' }], ['d.com']), 2);
       expect(cut.dropped).toBe(1);
       expect(cut.rules).toHaveLength(4);
-      expect(() => checkRuleCount(cut.rules, 2)).toThrow('Terlalu banyak rule');
+      expect(() => checkRuleCount(cut.rules, 2)).toThrow(t.tooManyRules(4, 2));
     });
   });
 
@@ -251,9 +252,7 @@ describe('buildDnrRules', () => {
       blocks: Array.from({ length: 5 }, (_, i) => ({ id: `${i}`, domain: `d${i}.com`, createdAt: 0 })),
     });
     expect(() => checkRuleCount(rules, rules.length)).not.toThrow();
-    expect(() => checkRuleCount(rules, rules.length - 1)).toThrow(
-      `Terlalu banyak rule: ${rules.length} dari maksimal ${rules.length - 1}`,
-    );
+    expect(() => checkRuleCount(rules, rules.length - 1)).toThrow(t.tooManyRules(rules.length, rules.length - 1));
   });
 
   it('assigns unique sequential ids', () => {

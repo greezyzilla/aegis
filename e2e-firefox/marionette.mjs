@@ -55,6 +55,8 @@ export async function launch({ firefox, extPath, hosts }) {
       ['browser.aboutwelcome.enabled', false],
       ['app.update.enabled', false],
       ['network.proxy.type', 0],
+      // navigator.language picks the UI language: the checks read the Indonesian UI.
+      ['intl.accept_languages', 'id'],
     ]
       .map(([k, v]) => `user_pref(${JSON.stringify(k)}, ${JSON.stringify(v)});`)
       .join('\n'),

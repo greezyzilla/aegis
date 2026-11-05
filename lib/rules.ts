@@ -1,6 +1,7 @@
 import { hostMatches } from './domain';
 import type { ListData, ListFilter } from './lists';
 import type { Settings } from './types';
+import { t } from '@/lib/i18n';
 
 /**
  * Plain-literal mirror of chrome.declarativeNetRequest.Rule (the generated typings use enums).
@@ -53,7 +54,7 @@ export interface RuleSet {
 /** Readable error before the browser rejects the whole update with a generic one. */
 export function checkRuleCount(rules: DnrRule[], max: number): void {
   if (rules.length > max) {
-    throw new Error(`Terlalu banyak rule: ${rules.length} dari maksimal ${max}. Hapus sebagian rule atau blok global.`);
+    throw new Error(t.tooManyRules(rules.length, max));
   }
 }
 

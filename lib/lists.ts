@@ -1,5 +1,6 @@
 import { storage } from '#imports';
 import { hostFromUrl, hostMatches, isValidDomain } from './domain';
+import { t } from '@/lib/i18n';
 
 /** Public blocklists Aegis can download. Keyed by id; the id is stored in Settings.lists. */
 export const LISTS = {
@@ -204,10 +205,10 @@ function* hostAndParents(host: string) {
 /** Downloads and parses a list. Throws with a readable message instead of returning bad data. */
 export async function downloadList(id: ListId, fetchFn: typeof fetch = fetch): Promise<ListData> {
   const res = await fetchFn(LISTS[id].url, { cache: 'no-cache' });
-  if (!res.ok) throw new Error(`Gagal unduh ${LISTS[id].name}: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(t.listDownloadFailed(LISTS[id].name, res.status));
   const parsed = parseFilterList(await res.text());
   if (parsed.domains.length < MIN_LIST_DOMAINS) {
-    throw new Error(`${LISTS[id].name} cuma berisi ${parsed.domains.length} domain, kemungkinan file rusak`);
+    throw new Error(t.listTooSmall(LISTS[id].name, parsed.domains.length));
   }
   return { ...parsed, updatedAt: Date.now() };
 }

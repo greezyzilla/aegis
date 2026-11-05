@@ -1,13 +1,14 @@
 import { isListId, LISTS } from '@/lib/lists';
 import type { BlockRule, ScriptEntry } from '@/lib/types';
 import { Avatar, Count, HostName, Icon } from './parts';
+import { t } from '@/lib/i18n';
 
 export interface ListHit {
   host: string;
   entries: ScriptEntry[];
 }
 
-const listName = (id: string | undefined) => (id && isListId(id) ? LISTS[id].name : 'daftar publik');
+const listName = (id: string | undefined) => (id && isListId(id) ? LISTS[id].name : t.publicList);
 
 interface Props {
   /** The user's own global blocks that hit this page. */
@@ -23,7 +24,7 @@ interface Props {
 /** "Diblok global": the user's blocks (removable) and public list hits (allowable per host). */
 export function GlobalBlocks({ blocks, blockedBy, onRemove, hits, isAllowed, onAllow }: Props) {
   if (blocks.length === 0 && hits.length === 0) {
-    return <p className="empty">Belum ada blok global yang kena di halaman ini.</p>;
+    return <p className="empty">{t.noGlobalHits}</p>;
   }
   return (
     <ul className="group" role="list">
@@ -36,15 +37,15 @@ export function GlobalBlocks({ blocks, blockedBy, onRemove, hits, isAllowed, onA
               <span className="chevron" />
               <Avatar host={b.domain} />
               <HostName name={b.script ? `${b.domain} / ${b.script}` : b.domain} />
-              {n > 0 ? <Count n={n} tone="blocked" /> : <span className="meta">berlaku setelah reload</span>}
+              {n > 0 ? <Count n={n} tone="blocked" /> : <span className="meta">{t.appliesAfterReload}</span>}
             </span>
             <button
               type="button"
               className="btn btn-ghost"
               onClick={() => onRemove(b.id)}
-              aria-label={`Hapus blok ${label}`}
+              aria-label={t.removeBlockLabel(label)}
             >
-              Hapus
+              {t.remove}
             </button>
           </li>
         );
@@ -63,15 +64,15 @@ export function GlobalBlocks({ blocks, blockedBy, onRemove, hits, isAllowed, onA
               <span className="sr-only">{name}</span>
             </span>
             {isAllowed(host) ? (
-              <span className="pending">✓ diizinkan</span>
+              <span className="pending">{t.allowedTag}</span>
             ) : (
               <button
                 type="button"
                 className="btn"
                 onClick={() => onAllow(host)}
-                aria-label={`Izinkan ${host} dari ${name}`}
+                aria-label={t.allowFromList(host, name)}
               >
-                Izinkan
+                {t.allow}
               </button>
             )}
           </li>

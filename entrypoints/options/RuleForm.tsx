@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { isValidDomain, isValidScript, normalizeDomain, normalizeScript } from '@/lib/domain';
 import type { NewRule } from '@/lib/types';
+import { t } from '@/lib/i18n';
 
 interface Props {
   initial?: NewRule;
@@ -27,9 +28,9 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
     const s = normalizeScript(script);
     const st = normalizeDomain(site);
     const next: Errors = {};
-    if (!isValidDomain(d)) next.domain = 'Domain nggak valid, contoh: cdn.jsdelivr.net';
-    if (s && !isValidScript(s)) next.script = 'Hanya karakter ASCII tanpa spasi';
-    if (!isGlobal && !isValidDomain(st)) next.site = 'Situs nggak valid, contoh: github.com';
+    if (!isValidDomain(d)) next.domain = t.invalidDomain;
+    if (s && !isValidScript(s)) next.script = t.invalidScript;
+    if (!isGlobal && !isValidDomain(st)) next.site = t.invalidSite;
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -55,7 +56,7 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
   return (
     <form className={withScope ? 'rule-form' : 'rule-form rule-form-noscope'} onSubmit={submit} noValidate>
       <div className="field">
-        <label htmlFor={`${id}-domain`}>Domain script</label>
+        <label htmlFor={`${id}-domain`}>{t.scriptDomain}</label>
         <input
           {...field('domain')}
           className="input mono"
@@ -68,7 +69,7 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
       </div>
       <div className="field">
         <label htmlFor={`${id}-script`}>
-          Nama script <span className="muted">(opsional)</span>
+          {t.scriptName} <span className="muted">{t.optional}</span>
         </label>
         <input
           {...field('script')}
@@ -82,7 +83,7 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
       </div>
       {withScope && (
         <div className="field">
-          <label htmlFor={`${id}-scope`}>Berlaku di</label>
+          <label htmlFor={`${id}-scope`}>{t.colScope}</label>
           <div className="scope-input">
             <select
               id={`${id}-scope`}
@@ -90,13 +91,13 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
               value={isGlobal ? 'global' : 'site'}
               onChange={(e) => setIsGlobal(e.target.value === 'global')}
             >
-              <option value="global">Semua situs</option>
-              <option value="site">Situs tertentu</option>
+              <option value="global">{t.everySite}</option>
+              <option value="site">{t.specificSite}</option>
             </select>
             {!isGlobal && (
               <input
                 {...field('site')}
-                aria-label="Situs"
+                aria-label={t.site}
                 className="input mono"
                 value={site}
                 onChange={(e) => setSite(e.target.value)}
@@ -114,7 +115,7 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
         </button>
         {onCancel && (
           <button type="button" className="btn" onClick={onCancel}>
-            Batal
+            {t.cancel}
           </button>
         )}
       </div>

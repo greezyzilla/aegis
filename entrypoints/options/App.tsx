@@ -9,6 +9,7 @@ import { PublicLists, requestRefresh } from './PublicLists';
 import { RuleForm } from './RuleForm';
 import { RuleTable } from './RuleTable';
 import { SiteList } from './SiteList';
+import { t } from '@/lib/i18n';
 
 export default function App() {
   const settings = useSettings();
@@ -36,17 +37,17 @@ export default function App() {
     if (!file) return;
     try {
       const { count, listsToEnable } = await importSettings(file);
-      let text = `${count} rule dibaca dan digabung (duplikat dilewati).`;
+      let text = t.importRead(count);
       let error = false;
       // Lists come back on only once their data is downloaded again.
       for (const id of listsToEnable) {
         const res = await requestRefresh(id).catch((err: Error) => ({ ok: false as const, error: err.message }));
-        text += res.ok ? ` ${LISTS[id].name} diaktifkan.` : ` ${LISTS[id].name} belum aktif: ${res.error}`;
+        text += ' ' + (res.ok ? t.listEnabled(LISTS[id].name) : t.listNotEnabled(LISTS[id].name, res.error));
         error ||= !res.ok;
       }
       setStatus({ text, error });
     } catch (err) {
-      setStatus({ text: `Import gagal: ${(err as Error).message}`, error: true });
+      setStatus({ text: t.importFailed((err as Error).message), error: true });
     } finally {
       if (fileRef.current) fileRef.current.value = '';
     }
@@ -57,29 +58,26 @@ export default function App() {
       <header className="options-header">
         <div>
           <h1>Aegis</h1>
-          <p className="muted">
-            Di situs aktif semua script keblok, rule izin nentuin mana yang boleh lolos. Blok global berlaku di semua
-            situs.
-          </p>
+          <p className="muted">{t.intro}</p>
         </div>
       </header>
 
       <SiteList
-        title="Situs aktif"
-        description="Semua script keblok di sini, kecuali yang diizinkan rule izin."
+        title={t.activeSitesTitle}
+        description={t.activeSitesDesc}
         sites={settings.activeSites}
         onAdd={(site) => setSiteFlag('activeSites', site, site, true)}
-        addLabel="Tambah situs aktif"
+        addLabel={t.addActiveSite}
         onRemove={(s) => void removeSite('activeSites', s)}
       />
 
       <section className="card">
         <h2>
-          Blok global <span className="muted">({settings.blocks.length})</span>
+          {t.globalBlocksTitle} <span className="muted">({settings.blocks.length})</span>
         </h2>
-        <p className="muted">Diblok di semua situs, aktif atau nggak, dan menang lawan rule izin.</p>
+        <p className="muted">{t.globalBlocksDesc}</p>
         <RuleForm
-          submitLabel="Blok"
+          submitLabel={t.block}
           withScope={false}
           onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
         />
@@ -89,37 +87,41 @@ export default function App() {
       <PublicLists settings={settings} />
 
       <section className="card">
-        <h2>Tambah rule izin</h2>
-        <RuleForm submitLabel="Tambah" onSubmit={(r) => addRules([r])} />
+        <h2>{t.addAllowTitle}</h2>
+        <RuleForm submitLabel={t.add} onSubmit={(r) => addRules([r])} />
         <p className="muted hint">
-          Domain ikut nge-cover subdomain-nya (<span className="mono">example.com</span> →{' '}
-          <span className="mono">cdn.example.com</span>). Nama script dicocokkan ke path URL,{' '}
-          <span className="mono">*</span> jadi wildcard.
+          {t.ruleHint[0]}
+          <span className="mono">example.com</span>
+          {t.ruleHint[1]}
+          <span className="mono">cdn.example.com</span>
+          {t.ruleHint[2]}
+          <span className="mono">*</span>
+          {t.ruleHint[3]}
         </p>
       </section>
 
       <section className="card">
         <div className="card-head">
           <h2>
-            Rule izin <span className="muted">({settings.rules.length})</span>
+            {t.allowRulesTitle} <span className="muted">({settings.rules.length})</span>
           </h2>
           <div className="filters">
             <input
               type="search"
               className="input"
-              aria-label="Cari rule"
-              placeholder="Cari domain, script, situs…"
+              aria-label={t.searchRules}
+              placeholder={t.searchPlaceholder}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             <select
               className="input"
-              aria-label="Filter berlaku di"
+              aria-label={t.filterScope}
               value={scopeFilter}
               onChange={(e) => setScopeFilter(e.target.value)}
             >
-              <option value="all">Semua</option>
-              <option value="global">Global</option>
+              <option value="all">{t.all}</option>
+              <option value="global">{t.global}</option>
               {sites.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -128,47 +130,38 @@ export default function App() {
             </select>
           </div>
         </div>
-        <RuleTable
-          rules={filtered}
-          emptyText={
-            settings.rules.length ? 'Nggak ada rule yang cocok.' : 'Belum ada rule. Tambah di atas atau dari popup.'
-          }
-        />
+        <RuleTable rules={filtered} emptyText={settings.rules.length ? t.noMatch : t.noRules} />
       </section>
 
       <SiteList
-        title="Inline script diizinkan"
-        description="Script inline di HTML boleh jalan di situs ini, sebagai halaman atau iframe (mis. player video)."
+        title={t.inlineTitle}
+        description={t.inlineDesc}
         sites={settings.inlineSites}
         onAdd={(site) => setSiteFlag('inlineSites', site, site, true)}
-        addLabel="Tambah situs inline"
+        addLabel={t.addInlineSite}
         onRemove={(s) => void removeSite('inlineSites', s)}
       />
 
       <div className="grid-2">
         <section className="card">
-          <h2>Pengaturan</h2>
-          <Switch
-            checked={isAutoReload(settings)}
-            onChange={(v) => void setAutoReload(v)}
-            label="Reload otomatis saat popup ditutup"
-          >
+          <h2>{t.settingsTitle}</h2>
+          <Switch checked={isAutoReload(settings)} onChange={(v) => void setAutoReload(v)} label={t.autoReload}>
             <span>
-              Reload otomatis saat popup ditutup
-              <span className="muted block">Kalau ada perubahan di popup, tab-nya di-reload sekali.</span>
+              {t.autoReload}
+              <span className="muted block">{t.autoReloadDesc}</span>
             </span>
           </Switch>
         </section>
 
         <section className="card">
-          <h2>Backup</h2>
-          <p className="muted">Import digabung ke rule yang ada, bukan menimpa.</p>
+          <h2>{t.backupTitle}</h2>
+          <p className="muted">{t.backupDesc}</p>
           <div className="form-actions">
             <button type="button" className="btn" onClick={() => exportSettings(settings)}>
-              Export JSON
+              {t.exportJson}
             </button>
             <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-              Import JSON
+              {t.importJson}
             </button>
             <input
               ref={fileRef}

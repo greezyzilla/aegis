@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { isValidDomain, normalizeDomain, siteOf } from '@/lib/domain';
+import { t } from '@/lib/i18n';
 
 interface Props {
   title: string;
@@ -21,7 +22,7 @@ export function SiteList({ title, description, sites, onRemove, onAdd, addLabel 
     e.preventDefault();
     const site = siteOf(normalizeDomain(value));
     if (!isValidDomain(site)) {
-      setError('Situs nggak valid, contoh: github.com');
+      setError(t.invalidSite);
       return;
     }
     setError(null);
@@ -39,7 +40,7 @@ export function SiteList({ title, description, sites, onRemove, onAdd, addLabel 
         <form className="site-add" onSubmit={submit} noValidate>
           <input
             className="input mono"
-            aria-label={addLabel ?? `Tambah ${title.toLowerCase()}`}
+            aria-label={addLabel ?? t.addNamed(title)}
             aria-invalid={!!error}
             aria-describedby={error ? `${id}-err` : undefined}
             value={value}
@@ -48,7 +49,7 @@ export function SiteList({ title, description, sites, onRemove, onAdd, addLabel 
             autoComplete="off"
           />
           <button type="submit" className="btn btn-primary">
-            Tambah
+            {t.add}
           </button>
           {error && (
             <span id={`${id}-err`} className="field-error">
@@ -58,17 +59,13 @@ export function SiteList({ title, description, sites, onRemove, onAdd, addLabel 
         </form>
       )}
       {sites.length === 0 ? (
-        <p className="empty muted">
-          {onAdd
-            ? 'Belum ada. Tambah di atas, atau nyalakan dari popup di situsnya.'
-            : 'Kosong. Atur dari popup di situs terkait.'}
-        </p>
+        <p className="empty muted">{onAdd ? t.sitesEmptyAddable : t.sitesEmpty}</p>
       ) : (
         <ul className="chips" role="list">
           {sites.map((s) => (
             <li key={s} className="chip">
               <span className="mono">{s}</span>
-              <button type="button" className="chip-remove" onClick={() => onRemove(s)} aria-label={`Hapus ${s}`}>
+              <button type="button" className="chip-remove" onClick={() => onRemove(s)} aria-label={t.removeLabel(s)}>
                 ×
               </button>
             </li>

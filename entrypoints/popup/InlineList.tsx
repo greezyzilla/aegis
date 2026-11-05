@@ -1,5 +1,6 @@
 import { Switch } from '@/components/Switch';
 import { Avatar, Count, HostName } from './parts';
+import { t } from '@/lib/i18n';
 
 export interface InlineRow {
   host: string;
@@ -27,14 +28,14 @@ export function InlineList({ rows, disabled, onToggle }: Props) {
             <span className="chevron" />
             <Avatar host={r.host} own={r.isPage} />
             <HostName name={r.host} />
-            {r.isPage ? <span className="sr-only">halaman ini</span> : <span className="meta">iframe</span>}
+            {r.isPage ? <span className="sr-only">{t.thisPage}</span> : <span className="meta">{t.iframe}</span>}
             {!r.allowed && <Count n={r.blocked} tone="blocked" />}
           </span>
           <Switch
             checked={!r.allowed}
             disabled={disabled}
             onChange={(block) => onToggle(r, !block)}
-            label={`Blok inline script di ${r.site}`}
+            label={t.blockInlineOn(r.site)}
           />
         </li>
       ))}
