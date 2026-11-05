@@ -20,7 +20,9 @@ const words = (list: string[]) =>
 
 /** Words the Indonesian text uses and the English text never does: any of them on screen was not translated. */
 const enWords = words(texts(messagesFor('en')));
-const INDONESIAN = [...words(texts(messagesFor('id')))].filter((w) => !enWords.has(w));
+// The language picker names "Bahasa Indonesia" in its own language on purpose.
+const OWN_NAMES = new Set(['bahasa', 'indonesia']);
+const INDONESIAN = [...words(texts(messagesFor('id')))].filter((w) => !enWords.has(w) && !OWN_NAMES.has(w));
 
 async function expectNoIndonesian(page: Page) {
   const onScreen = words([await page.locator('body').innerText()]);

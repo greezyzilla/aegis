@@ -103,6 +103,11 @@ export function setAutoReload(autoReload: boolean) {
   return updateSettings((s) => ({ ...s, autoReload }));
 }
 
+/** `undefined` goes back to the browser's language. */
+export function setLangPref(lang: Settings['lang']) {
+  return updateSettings(({ lang: _old, ...s }) => (lang ? { ...s, lang } : s));
+}
+
 type SiteList = 'activeSites' | 'inlineSites';
 
 /** Adds `site`, or removes every entry covering `host` when turning off. */

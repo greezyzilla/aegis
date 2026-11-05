@@ -17,6 +17,8 @@ interface Backup {
   inlineSites: string[];
   lists: string[];
   listAllow: string[];
+  /** Missing: the browser's language. */
+  lang?: 'id' | 'en';
 }
 
 export interface ImportResult {
@@ -36,6 +38,7 @@ export function exportSettings(s: Settings) {
     inlineSites: s.inlineSites,
     lists: s.lists,
     listAllow: s.listAllow,
+    lang: s.lang,
   };
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a');
@@ -85,6 +88,8 @@ export async function importSettings(file: File): Promise<ImportResult> {
       activeSites: Array.from(new Set([...s.activeSites, ...active])),
       inlineSites: Array.from(new Set([...s.inlineSites, ...inline])),
       listAllow: Array.from(new Set([...s.listAllow, ...listAllow])),
+      // Merged like the rest: a language already picked here wins over the file's.
+      ...(s.lang === undefined && (data.lang === 'id' || data.lang === 'en') ? { lang: data.lang } : {}),
     };
   });
   return { count: rules.length + blocks.length, listsToEnable };

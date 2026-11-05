@@ -13,6 +13,7 @@ import {
   removeRule,
   removeSite,
   ruleMatches,
+  setLangPref,
   setSiteFlag,
   settingsItem,
 } from '@/lib/settings';
@@ -45,6 +46,15 @@ describe('settings storage', () => {
   it('migrates v2 settings: adds empty public lists, keeps the rest', () => {
     const v2 = { rules: [], blocks: [], activeSites: ['a.test'], inlineSites: [] };
     expect(migrateV2(v2)).toEqual({ ...v2, lists: [], listAllow: [] });
+  });
+});
+
+describe('language choice', () => {
+  it('stores a picked language and drops the field to follow the browser again', async () => {
+    await setLangPref('en');
+    expect((await get()).lang).toBe('en');
+    await setLangPref(undefined);
+    expect('lang' in (await get())).toBe(false);
   });
 });
 

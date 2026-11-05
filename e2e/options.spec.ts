@@ -354,4 +354,35 @@ test.describe('options page', () => {
     ).toBeVisible();
     expect((await getSettings()).lists).toEqual([]);
   });
+
+  test('the language picked in Settings applies to the options page, the popup and background errors', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+    visit,
+    openPopup,
+  }) => {
+    await setSettings(DEFAULTS);
+    await context.route(LIST_URL, (r) => r.fulfill({ status: 503, body: 'down' }));
+    const page = await context.newPage();
+    await openOptions(page, extensionId);
+
+    await Promise.all([page.waitForEvent('load'), page.getByLabel('Bahasa', { exact: true }).selectOption('en')]);
+    await expect(page.getByRole('region', { name: /^Allow rules/ })).toBeVisible();
+    await expect(page).toHaveTitle('Aegis — Rules');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    expect((await getSettings()).lang).toBe('en');
+
+    const popup = await openPopup(await visit('www.shop.test'));
+    await expect(popup.locator('.section-title').first()).toHaveText('Blocked on this page');
+
+    // Written by the background, which follows the same choice.
+    await page.getByRole('switch', { name: 'Turn on EasyPrivacy' }).click();
+    await expect(page.getByRole('alert')).toHaveText("Couldn't download EasyPrivacy: HTTP 503");
+
+    await Promise.all([page.waitForEvent('load'), page.getByLabel('Language', { exact: true }).selectOption('auto')]);
+    await expect(page.getByRole('region', { name: /^Rule izin/ })).toBeVisible();
+    expect('lang' in (await getSettings())).toBe(false);
+  });
 });

@@ -38,6 +38,8 @@ export interface Settings {
   listAllow: string[];
   /** Reload the tab when the popup closes after a change. Missing means on. */
   autoReload?: boolean;
+  /** UI language picked in the options page. Missing means the browser's language. */
+  lang?: 'id' | 'en';
 }
 
 export interface ScriptEntry {

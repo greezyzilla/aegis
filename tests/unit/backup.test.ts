@@ -130,4 +130,14 @@ describe('importSettings', () => {
     const s = await settingsItem.getValue();
     expect([s.lists, s.listAllow]).toEqual([['easyprivacy'], ['keep.test']]);
   });
+
+  it('takes the language from a backup only when none is picked here', async () => {
+    const backup = (lang: unknown) => file({ app: 'aegis', version: 3, rules: [], lang });
+    await importSettings(backup('xx'));
+    expect((await settingsItem.getValue()).lang).toBeUndefined();
+    await importSettings(backup('en'));
+    expect((await settingsItem.getValue()).lang).toBe('en');
+    await importSettings(backup('id'));
+    expect((await settingsItem.getValue()).lang).toBe('en');
+  });
 });

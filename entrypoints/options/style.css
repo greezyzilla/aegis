@@ -155,6 +155,11 @@ body {
   }
 }
 
+.input-lang {
+  flex: none;
+  width: 170px;
+}
+
 .status {
   margin: 8px 0 0;
   font-size: 12px;

@@ -13,6 +13,18 @@ export function messagesFor(lang: Lang): Messages {
   return lang === 'id' ? id(makeFormat('id-ID')) : en(makeFormat('en-US'));
 }
 
-/** The UI language of this page or worker, read once from the browser. */
-export const lang: Lang = langOf(globalThis.navigator?.language);
-export const t: Messages = messagesFor(lang);
+const browserLang = (): Lang => langOf(globalThis.navigator?.language);
+
+/** The UI language of this page or worker: the browser's until the stored choice is applied. */
+export let lang: Lang = browserLang();
+export let t: Messages = messagesFor(lang);
+
+/** Switches to the user's choice (missing means the browser's language). Returns whether it changed. */
+export function applyLang(pref: Lang | undefined): boolean {
+  const next = pref ?? browserLang();
+  if (next === lang) return false;
+  lang = next;
+  t = messagesFor(next);
+  if (typeof document !== 'undefined') document.documentElement.lang = next;
+  return true;
+}
