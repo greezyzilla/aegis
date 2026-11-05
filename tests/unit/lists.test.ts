@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { downloadList, listDataItem, listErrorItem, listMatcher, MIN_LIST_DOMAINS, parseFilterList } from '@/lib/lists';
+import { downloadList, listDataItem, listErrorItem, listMatcher, MIN_LIST_DOMAINS, parseFilterList, urlFilterRegExp } from '@/lib/lists';
 import { disableList, setListAllow, settingsItem, updateSettings } from '@/lib/settings';
 
 beforeEach(() => {
@@ -17,39 +17,145 @@ describe('parseFilterList', () => {
     expect(r.skipped).toBe(0);
   });
 
-  it('skips what cannot become a script block on every site', () => {
+  it('reads mixed resource types that include scripts as domain blocks', () => {
+    const r = parseFilterList(['||a.com^$script,third-party,xmlhttprequest', '||b.com^$~image,third-party', '||c.com^$important'].join('\n'));
+    expect(r.domains).toEqual(['a.com', 'b.com', 'c.com']);
+    expect(r.filters).toEqual([]);
+  });
+
+  it('keeps path entries as DNR url filters', () => {
+    const r = parseFilterList(
+      ['||cdn.com/track.js', '||cdn.com^*/pixel$script', '/analytics.js', '&ev=PageView&', '|http://x.o2.pl^', '||google.*/collect?', '/analytics.js'].join('\n'),
+    );
+    expect(r.filters).toEqual([
+      { url: '||cdn.com/track.js' },
+      { url: '||cdn.com^*/pixel', script: true },
+      { url: '/analytics.js' },
+      { url: '&ev=pageview&' },
+      { url: '|http://x.o2.pl^' },
+      { url: '||google.*/collect?' },
+    ]);
+    expect(r.skipped).toBe(0);
+  });
+
+  it('keeps site restrictions, party and exceptions on filters', () => {
+    const r = parseFilterList(
+      [
+        '||adobedtm.com^$third-party,domain=~adobe.com|~costco.com',
+        '||clarity.ms/tag/$script,domain=phileweb.com',
+        '@@||js-agent.newrelic.com^$script,domain=abema.tv',
+        '@@||addthis.com/js/*/addthis_widget.js$script,domain=a.com|b.com',
+        '@@||adobedtm.com/launch-$script,xmlhttprequest',
+        '@@||1trackapp.com/static/tracking/$script,stylesheet,~third-party',
+        '||rail.bank.com^$script,~third-party',
+      ].join('\n'),
+    );
+    expect(r.domains).toEqual([]);
+    expect(r.filters).toEqual([
+      { url: '||adobedtm.com^', notSites: ['adobe.com', 'costco.com'], party: 'third' },
+      { url: '||clarity.ms/tag/', sites: ['phileweb.com'], script: true },
+      { url: '||js-agent.newrelic.com^', allow: true, sites: ['abema.tv'], script: true },
+      { url: '||addthis.com/js/*/addthis_widget.js', allow: true, sites: ['a.com', 'b.com'], script: true },
+      { url: '||adobedtm.com/launch-', allow: true, script: true },
+      { url: '||1trackapp.com/static/tracking/', allow: true, party: 'first', script: true },
+      { url: '||rail.bank.com^', party: 'first', script: true },
+    ]);
+  });
+
+  it('narrows broken positive sites, and drops an entry whose negated site cannot be expressed', () => {
+    const r = parseFilterList(['||a.com/x$domain=ok.com|wayfair.*', '||b.com/x$domain=wayfair.*', '||c.com/x$domain=~wayfair.*'].join('\n'));
+    expect(r.filters).toEqual([{ url: '||a.com/x', sites: ['ok.com'] }]);
+    expect(r.skipped).toBe(2);
+  });
+
+  it('drops path blocks under a blocked domain, unless the list excepts that host', () => {
+    const r = parseFilterList(['||t.com^', '@@||ok.t.com^', '||t.com/x.js', '||sub.t.com^*/y', '||ok.t.com/z.js', '@@||t.com/keep.js$domain=a.com'].join('\n'));
+    expect(r.filters).toEqual([{ url: '||ok.t.com/z.js' }, { url: '||t.com/keep.js', allow: true, sites: ['a.com'] }]);
+    expect(r.skipped).toBe(2);
+  });
+
+  it('skips what cannot block a script, or what DNR cannot express', () => {
     const r = parseFilterList(
       [
         'example.com##.ad', // cosmetic
-        '||cdn.com/track.js', // path
-        '||cdn.com^*/pixel', // wildcard path
-        '/analytics.js', // not domain anchored
-        '/^https?:\\/\\/x/', // regex
-        '||site.com^$domain=news.com', // site restricted
+        '/^https?:\\/\\/x/$script', // regex
         '||img.com^$image', // other resource type
-        '||weird.com^$popup', // unsupported option
-        '||bad_domain^', // invalid domain
+        '/pixel.gif$image,ping', // path, other resource types
+        '||weird.com^$popup', // popup only
+        '||x.com^$~script', // everything but scripts
+        '||cb.com/c.js$redirect=noop.js,script', // changes the action
+        '||post.com/rec$method=post', // unsupported option
+        '||bad_domain^', // invalid host
+        '/stats/\u00e9v', // non-ASCII
+        '/a|b', // "|" inside the pattern
       ].join('\r\n'),
     );
     expect(r.domains).toEqual([]);
-    expect(r.skipped).toBe(9);
+    expect(r.filters).toEqual([]);
+    expect(r.skipped).toBe(11);
+  });
+});
+
+describe('urlFilterRegExp', () => {
+  const m = (filter: string, url: string) => urlFilterRegExp(filter).test(url);
+
+  it('anchors || to the host or a subdomain', () => {
+    expect(m('||cdn.com/x.js', 'https://cdn.com/x.js')).toBe(true);
+    expect(m('||cdn.com/x.js', 'https://a.cdn.com/x.js')).toBe(true);
+    expect(m('||cdn.com/x.js', 'https://notcdn.com/x.js')).toBe(false);
+    expect(m('||cdn.com/x.js', 'https://evil.com/?u=cdn.com/x.js')).toBe(false);
+  });
+
+  it('treats ^ as a separator, * as anything, | as an end anchor, case-insensitive', () => {
+    expect(m('||cdn.com^*/pixel', 'http://cdn.com:8080/a/pixel')).toBe(true);
+    expect(m('||cdn.com^', 'https://cdn.com.evil.net/')).toBe(false);
+    expect(m('/analytics.js|', 'https://x.com/Analytics.js')).toBe(true);
+    expect(m('/analytics.js|', 'https://x.com/analytics.js?v=1')).toBe(false);
+    expect(m('|http://a.b^', 'http://a.b/')).toBe(true);
+    expect(m('|http://a.b^', 'https://a.b/')).toBe(false);
   });
 });
 
 describe('listMatcher', () => {
-  const covers = listMatcher({ domains: ['tracker.com'], exceptions: ['ok.tracker.com'] }, ['mine.tracker.com']);
+  const covers = listMatcher(
+    {
+      domains: ['tracker.com'],
+      exceptions: ['ok.tracker.com'],
+      filters: [
+        { url: '/collect.js' },
+        { url: '||cdn.com/only-on-news.js', sites: ['news.com'] },
+        { url: '||tracker.com^', allow: true, sites: ['partner.com'] },
+        { url: '/collect.js', allow: true, notSites: ['news.com'], party: 'first' },
+      ],
+    },
+    ['mine.tracker.com'],
+    ['active.com'],
+  );
 
   it('covers the domain and its subdomains only', () => {
-    expect(covers('tracker.com')).toBe(true);
-    expect(covers('a.b.tracker.com')).toBe(true);
-    expect(covers('nottracker.com')).toBe(false);
-    expect(covers('com')).toBe(false);
+    expect(covers('https://tracker.com/a.js')).toBe(true);
+    expect(covers('https://a.b.tracker.com/a.js')).toBe(true);
+    expect(covers('https://nottracker.com/a.js')).toBe(false);
   });
 
   it('honors list exceptions and user overrides, with their subdomains', () => {
-    expect(covers('ok.tracker.com')).toBe(false);
-    expect(covers('x.ok.tracker.com')).toBe(false);
-    expect(covers('mine.tracker.com')).toBe(false);
+    expect(covers('https://ok.tracker.com/a.js')).toBe(false);
+    expect(covers('https://x.ok.tracker.com/a.js')).toBe(false);
+    expect(covers('https://mine.tracker.com/a.js')).toBe(false);
+  });
+
+  it('matches path filters, limited to their sites', () => {
+    expect(covers('https://cdn.com/collect.js', 'news.com')).toBe(true);
+    expect(covers('https://cdn.com/only-on-news.js', 'news.com')).toBe(true);
+    expect(covers('https://cdn.com/only-on-news.js', 'blog.com')).toBe(false);
+  });
+
+  it('site and first-party exceptions unblock only where they apply, never on active sites', () => {
+    expect(covers('https://tracker.com/a.js', 'partner.com')).toBe(false);
+    expect(covers('https://tracker.com/a.js', 'other.com')).toBe(true);
+    expect(covers('https://www.shop.com/collect.js', 'shop.com')).toBe(false);
+    expect(covers('https://cdn.net/collect.js', 'shop.com')).toBe(true);
+    expect(covers('https://www.active.com/collect.js', 'active.com')).toBe(true);
   });
 });
 

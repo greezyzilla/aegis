@@ -31,6 +31,26 @@ test.describe('public lists', () => {
     expect((await ran(await visit('site-a.test'))).loaded).toEqual(['sub.cdn.test/c.js']);
   });
 
+  test('path entries block everywhere; site exceptions unblock on their site only, never on active sites', async ({ setSettings, visit, ran, tabState }) => {
+    const list: ListData = {
+      domains: ['other.test'],
+      exceptions: [],
+      filters: [{ url: '/lib/b.js' }, { url: '||cdn.test^*/lib/b.js', allow: true, sites: ['site-b.test'] }],
+      updatedAt: 0,
+      skipped: 0,
+    };
+    await setSettings(ON, { easyprivacy: list });
+    const siteA = await visit('site-a.test');
+    expect((await ran(siteA)).loaded).toEqual(ALL_SCRIPTS('site-a.test').filter((s) => s !== 'cdn.test/lib/b.js' && s !== 'other.test/d.js'));
+    await expect
+      .poll(async () => (await tabState(siteA)).scripts.filter((s) => s.list === 'easyprivacy').map((s) => s.file).sort())
+      .toEqual(['b.js', 'd.js']);
+    expect((await ran(await visit('site-b.test'))).loaded).toEqual(ALL_SCRIPTS('site-b.test').filter((s) => s !== 'other.test/d.js'));
+
+    await setSettings({ ...ON, activeSites: ['site-b.test'], rules: [{ id: 'r', domain: 'cdn.test', scope: 'global', createdAt: 0 }] }, { easyprivacy: list });
+    expect((await ran(await visit('site-b.test'))).loaded).toEqual(['cdn.test/lib/a.js', 'sub.cdn.test/c.js']);
+  });
+
   test('popup names the list, and "Izinkan" unblocks that host from it', async ({ setSettings, visit, openPopup, ran, getSettings, sw, tabIdOf }) => {
     await setSettings(ON, { easyprivacy: LIST });
     const site = await visit('site-a.test');
@@ -52,14 +72,14 @@ test.describe('public lists', () => {
 
   test('Options downloads the list, shows its size, and turning it off removes it', async ({ setSettings, context, extensionId, getSettings, visit, ran, sw }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
-    await context.route(LIST_URL, (r) => r.fulfill({ body: fakeList() }));
+    await context.route(LIST_URL, (r) => r.fulfill({ body: fakeList('/lib/b.js\n@@||cdn.test^*/lib/a.js$domain=site-z.test') }));
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
     const toggle = page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' });
 
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
-    await expect(page.getByText(/1\.001 domain · 1 pengecualian/)).toBeVisible();
+    await expect(page.getByText(/1\.001 domain · 1 path · 2 pengecualian/)).toBeVisible();
     expect((await getSettings()).lists).toEqual(['easyprivacy']);
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).not.toContain('cdn.test/lib/a.js');
 

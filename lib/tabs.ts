@@ -3,6 +3,8 @@ import type { TabState } from './types';
 
 export const tabStateKey = (tabId: number) => `session:tab:${tabId}` as const;
 export const syncErrorKey = 'session:syncError' as const;
+/** How many public-list entries the last rule sync left out to fit the browser's rule cap. */
+export const listDroppedKey = 'session:listDropped' as const;
 
 export function getTabState(tabId: number) {
   return storage.getItem<TabState>(tabStateKey(tabId));

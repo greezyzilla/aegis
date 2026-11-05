@@ -3,7 +3,7 @@ import { fileFromUrl, hostFromUrl } from '@/lib/domain';
 import { downloadList, isListId, LIST_IDS, listDataItem, listErrorItem, listMatcher, type ListId } from '@/lib/lists';
 import { buildDnrRules, checkRuleCount, type ListRules } from '@/lib/rules';
 import { badgeCount, DEFAULT_SETTINGS, isAutoReload, settingsItem, updateSettings } from '@/lib/settings';
-import { LIST_REFRESH, POPUP_PORT, syncErrorKey, tabStateKey, type ListRefreshMessage, type PopupPortMessage } from '@/lib/tabs';
+import { LIST_REFRESH, listDroppedKey, POPUP_PORT, syncErrorKey, tabStateKey, type ListRefreshMessage, type PopupPortMessage } from '@/lib/tabs';
 import { emptyTabState, normalizeTabState, type InlineBlockedMessage, type ScriptEntry, type TabState } from '@/lib/types';
 
 const MAX_SCRIPTS_PER_TAB = 300;
@@ -25,14 +25,16 @@ export default defineBackground(() => {
     syncChain = syncChain.then(async () => {
       try {
         const settings = await settingsItem.getValue();
-        const rules = buildDnrRules(settings, await readLists(settings.lists));
-        checkRuleCount(rules, browser.declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_RULES);
+        const max = browser.declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_RULES;
+        const { rules, dropped } = buildDnrRules(settings, await readLists(settings.lists), max);
+        checkRuleCount(rules, max);
         const existing = await browser.declarativeNetRequest.getDynamicRules();
         await browser.declarativeNetRequest.updateDynamicRules({
           removeRuleIds: existing.map((r) => r.id),
           addRules: rules as unknown as Browser.declarativeNetRequest.Rule[],
         });
         await storage.removeItem(syncErrorKey);
+        await (dropped ? storage.setItem(listDroppedKey, dropped) : storage.removeItem(listDroppedKey));
         await browser.action.setBadgeBackgroundColor({ color: '#9f1d1d' });
       } catch (err) {
         console.error('[aegis] failed to sync rules', err);
@@ -47,13 +49,13 @@ export default defineBackground(() => {
   for (const id of LIST_IDS) listDataItem(id).watch(syncRules);
 
   // ---- Public lists: matchers tag what a list blocked; downloads on request and weekly ----
-  type Matcher = { id: ListId; covers: (host: string) => boolean };
+  type Matcher = { id: ListId; covers: (url: string, initiator?: string) => boolean };
   const buildMatchers = async (): Promise<Matcher[]> => {
     const settings = await settingsItem.getValue();
     const out: Matcher[] = [];
     for (const id of settings.lists.filter(isListId)) {
       const data = await listDataItem(id).getValue();
-      if (data) out.push({ id, covers: listMatcher(data, settings.listAllow) });
+      if (data) out.push({ id, covers: listMatcher(data, settings.listAllow, settings.activeSites) });
     }
     return out;
   };
@@ -92,6 +94,15 @@ export default defineBackground(() => {
     }
   };
   browser.runtime.onInstalled.addListener(() => void ensureAlarm());
+  // Data saved before Aegis read path entries has no filters: fetch it again instead of waiting a week.
+  browser.runtime.onInstalled.addListener(async ({ reason }) => {
+    if (reason !== 'update') return;
+    const { lists } = await settingsItem.getValue();
+    for (const id of lists.filter(isListId)) {
+      const data = await listDataItem(id).getValue();
+      if (data && !data.filters) await refreshList(id).catch(() => {});
+    }
+  });
   browser.runtime.onStartup.addListener(() => void ensureAlarm());
   browser.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name !== LIST_ALARM) return;
@@ -177,7 +188,7 @@ export default defineBackground(() => {
   };
 
   const record = async (
-    details: { tabId: number; url: string; initiator?: string },
+    details: { tabId: number; url: string; initiator?: string; originUrl?: string },
     blocked: boolean,
   ) => {
     if (details.tabId < 0) return;
@@ -185,7 +196,9 @@ export default defineBackground(() => {
     if (!host) return;
 
     const state = await getState(details.tabId);
-    const list = blocked ? (await matchers).find((m) => m.covers(host))?.id : undefined;
+    // Chrome reports the initiator, Firefox only originUrl. The list check needs it on both.
+    const from = hostFromUrl(details.initiator ?? details.originUrl) ?? '';
+    const list = blocked ? (await matchers).find((m) => m.covers(details.url, from))?.id : undefined;
     const entry: ScriptEntry = {
       url: details.url,
       host,

@@ -145,7 +145,7 @@ export const test = base.extend<Fixtures, { port: number }>({
       await sw.evaluate((settings) => chrome.storage.local.set({ settings }), s);
       // Wait for these exact rules, not just a count: different settings can yield the same number
       // of rules (e.g. a fresh install and one active site), and a page loaded in between mixes both.
-      const expected = buildDnrRules(s, lists);
+      const expected = buildDnrRules(s, lists).rules;
       await expect
         .poll(() => sw.evaluate(async () => chrome.declarativeNetRequest.getDynamicRules()))
         .toMatchObject(expected);

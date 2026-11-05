@@ -148,6 +148,29 @@ try {
     },
     [['easyprivacy', 'easyprivacy'], '2'],
   );
+  const filters = [{ url: '/lib/b.js' }, { url: '||cdn.test^*/lib/b.js', allow: true, sites: ['site-b.test'] }];
+  await set({ ...BASE, lists: ['easyprivacy'] }, { 'list:easyprivacy': { domains: ['other.test'], exceptions: [], filters, updatedAt: 1, skipped: 0 } });
+  await expectEventually('path entry blocks everywhere', async () => (await ran('site-a.test')).loaded, ['cdn.test/lib/a.js', 'site-a.test/self.js', 'sub.cdn.test/c.js']);
+  await expectEventually('path hit tagged with the list (originUrl)', async () => (await tabView('site-a.test')).lists, ['easyprivacy', 'easyprivacy']);
+  await expectEventually('site exception unblocks on its site', async () => (await ran('site-b.test')).loaded, ['cdn.test/lib/a.js', 'cdn.test/lib/b.js', 'site-b.test/self.js', 'sub.cdn.test/c.js']);
+  await set({ ...BASE, lists: ['easyprivacy'], activeSites: ['site-b.test'], rules: [rule('cdn.test')] }, { 'list:easyprivacy': { domains: ['other.test'], exceptions: [], filters, updatedAt: 1, skipped: 0 } });
+  await expectEventually('site exception does not apply on an active site', async () => (await ran('site-b.test')).loaded, ['cdn.test/lib/a.js', 'sub.cdn.test/c.js']);
+
+  const many = Array.from({ length: 6000 }, (_, i) => ({ url: `/x${i}.js` }));
+  await set({ ...BASE, lists: ['easyprivacy'] }, { 'list:easyprivacy': { domains: ['other.test'], exceptions: [], filters: many, updatedAt: 1, skipped: 0 } });
+  await expectEventually(
+    '6,000 path entries are cut to the 5,000-rule cap, without a sync error',
+    () =>
+      inExt(async () => {
+        const s = await browser.storage.session.get(['listDropped', 'syncError']);
+        return [(await browser.declarativeNetRequest.getDynamicRules()).length, s.listDropped ?? null, s.syncError ?? null];
+      }),
+    [5000, 1004, null],
+    60000,
+  );
+  await set({ ...BASE });
+  await expectEventually('dropped count cleared once everything fits', () => inExt(async () => (await browser.storage.session.get('listDropped')).listDropped ?? null), null);
+
   await expectEventually('weekly refresh alarm', () => inExt(async () => (await browser.alarms.get('aegis:lists'))?.periodInMinutes ?? null), 10080);
   if (process.env.AEGIS_FIREFOX_NETWORK === '1') {
     await expectEventually(

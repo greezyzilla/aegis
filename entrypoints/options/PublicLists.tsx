@@ -1,10 +1,10 @@
-import { browser } from '#imports';
+import { browser, storage } from '#imports';
 import { useEffect, useState } from 'react';
 import { Switch } from '@/components/Switch';
 import { LIST_IDS, LISTS, listDataItem, listErrorItem, type ListData, type ListId } from '@/lib/lists';
 import { readAndWatch } from '@/lib/readAndWatch';
 import { disableList, setListAllow } from '@/lib/settings';
-import { LIST_REFRESH, type ListRefreshMessage, type ListRefreshResult } from '@/lib/tabs';
+import { LIST_REFRESH, listDroppedKey, type ListRefreshMessage, type ListRefreshResult } from '@/lib/tabs';
 import type { Settings } from '@/lib/types';
 
 const fmt = new Intl.NumberFormat('id-ID');
@@ -60,9 +60,17 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
   const [data, setData] = useState<ListData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dropped, setDropped] = useState<number | null>(null);
 
   useEffect(() => readAndWatch(() => listDataItem(id).getValue(), (cb) => listDataItem(id).watch(cb), setData), [id]);
+  useEffect(
+    () => readAndWatch(() => storage.getItem<number>(listDroppedKey), (cb) => storage.watch<number>(listDroppedKey, cb), setDropped),
+    [],
+  );
   useEffect(() => readAndWatch(() => listErrorItem(id).getValue(), (cb) => listErrorItem(id).watch(cb), setError), [id]);
+
+  const unblocks = data?.filters?.filter((f) => f.allow).length ?? 0;
+  const paths = (data?.filters?.length ?? 0) - unblocks;
 
   const refresh = async () => {
     setBusy(true);
@@ -95,13 +103,18 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
       {enabled && data && !busy && (
         <div className="public-list-meta">
           <span className="muted">
-            {fmt.format(data.domains.length)} domain · {fmt.format(data.exceptions.length)} pengecualian · diperbarui{' '}
-            {fmtDate.format(data.updatedAt)}
+            {fmt.format(data.domains.length)} domain · {fmt.format(paths)} path ·{' '}
+            {fmt.format(data.exceptions.length + unblocks)} pengecualian · diperbarui {fmtDate.format(data.updatedAt)}
           </span>
           <button type="button" className="btn" onClick={() => void refresh()}>
             Perbarui sekarang
           </button>
         </div>
+      )}
+      {enabled && data && !busy && !!dropped && (
+        <p className="muted block" role="note">
+          {fmt.format(dropped)} path tidak dipakai: browser ini membatasi jumlah rule. Yang paling mirip script tetap dipakai.
+        </p>
       )}
       {error && !busy && (
         <p className="field-error" role="alert">
