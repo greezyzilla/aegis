@@ -4,11 +4,11 @@
 
 `main` is always releasable and protected by a ruleset: changes land through a pull request, the `check` workflow must pass, and force pushes and branch deletion are blocked.
 
-Work on a short-lived branch named `<type>/<short-slug>`, using the commit types below, e.g. `feat/easyprivacy-paths`, `fix/firefox-initiator`, `ci/release-conventions`. Open one PR per change; the branch is deleted when it is merged.
+Work on a short-lived branch named `<type>/<short-slug>`, using the commit types below, e.g. `feat/easyprivacy-paths`, `fix/firefox-initiator`, `ci/release-conventions`. One PR per batch of related work, with one commit per change in it; the branch is deleted when it is merged.
 
-## Commit messages and PR titles
+## Commit messages
 
-[Conventional Commits](https://www.conventionalcommits.org/), in English:
+Every commit is a [Conventional Commit](https://www.conventionalcommits.org/), in English:
 
 ```
 <type>(<optional scope>): <what changes, imperative, lowercase>
@@ -23,12 +23,16 @@ Work on a short-lived branch named `<type>/<short-slug>`, using the commit types
 
 Common scopes: `popup`, `options`, `lists`, `rules`, `backup`, `firefox`, `deps`. Mark a breaking change with `!` (`feat!: ...`) or a `BREAKING CHANGE:` footer. Explain the why in the body.
 
-The PR title follows the same format: the `pr-title` workflow checks it, and it becomes the commit subject on `main`. The description follows the [template](.github/pull_request_template.md): what changes, why, and how it was tested.
+## PR titles
+
+A plain English sentence, not a Conventional Commit: `Let the user pick the UI language in the options page`. The merge commit carries the title, and release-please reads the line after "Merge pull request", so a Conventional title would show up in the changelog a second time next to the commits it merges.
+
+The `pr-title` workflow checks both rules: every commit in the PR is a Conventional Commit (merges from `main` are skipped) and the title is not. Bot PRs (the Release PR, Dependabot) are one commit each and keep their Conventional title. The description follows the [template](.github/pull_request_template.md): what changes, why, and how it was tested.
 
 ## Merging
 
-- **Squash merge** is the default: one PR, one commit on `main`, with the PR title as its subject and the branch's commit messages as its body. The PR description stays on the PR.
-- **Merge commit** only when the PR's commits must stay separate, for example when a later file refers to one of them by hash (as `.git-blame-ignore-revs` does). Say so in the PR.
+- **Merge commit** is the default (`gh pr merge <number> --merge`): the PR's commits land on `main` as they are, one change each, so the changelog lists each of them. The merge commit is titled "Merge pull request #N from …" with the PR title as its body.
+- **Squash** only for bot PRs (the Release PR, Dependabot): they are a single commit already.
 - Rebase merging is disabled, and history on `main` is never rewritten.
 
 ## Before opening a PR
@@ -72,7 +76,7 @@ Merging that PR tags `vX.Y.Z`, publishes the GitHub Release, and attaches `aegis
 
 The extension is not published to the stores. Firefox release builds only keep signed add-ons installed, so the Firefox build is signed on AMO as **unlisted**: never listed in the store, signed automatically, and installable for good from the `.xpi`. To sign locally instead, put the AMO API credentials (addons.mozilla.org → Developer Hub → Manage API Keys) in `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` and run `npm run sign:firefox` (output in `dist/signed/`). Signing uploads the sources zip with the build because the bundle is minified; `wxt.config.ts` keeps `backlog/` and test output out of that zip.
 
-The Release PR is opened and updated by the workflow's own token, and the repo is public, so GitHub holds its checks: `check` waits for approval and `pr-title` does not start. A maintainer starts them: `gh pr update-branch <number>` when the branch is behind `main`, otherwise close and reopen the PR. Merge it once both pass, like any other PR: `gh pr merge <number> --squash`. Never merge past the ruleset with `--admin`.
+The Release PR is opened and updated by the workflow's own token, and the repo is public, so GitHub holds its checks: `check` waits for approval and `pr-title` does not start. A maintainer starts them: `gh pr update-branch <number>` when the branch is behind `main`, otherwise close and reopen the PR. Merge it once both pass, with a squash since it is a single commit: `gh pr merge <number> --squash`. Never merge past the ruleset with `--admin`.
 
 ## Dependencies
 
