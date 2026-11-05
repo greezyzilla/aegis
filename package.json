@@ -2,7 +2,7 @@
   "name": "aegis",
   "description": "Script blocker with per-domain allow rules",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -11,6 +11,7 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "sign:firefox": "npm run zip:firefox && web-ext sign --channel unlisted --source-dir dist/firefox-mv3 --artifacts-dir dist/signed --upload-source-code dist/aegis-$npm_package_version-sources.zip",
     "compile": "tsc --noEmit",
     "postinstall": "wxt prepare",
     "test": "vitest run",
