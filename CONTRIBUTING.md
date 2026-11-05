@@ -44,9 +44,33 @@ npm run test:e2e       # Chromium (Playwright)
 npm run test:firefox   # Firefox (Marionette)
 ```
 
+## Running and testing locally
+
+```bash
+npm run dev            # opens a Chromium with the extension loaded, with HMR
+npm run build          # dist/chrome-mv3
+npm run build:firefox  # dist/firefox-mv3
+npm run lint           # ESLint
+npm run format         # Prettier (CI runs npm run format:check)
+npm test               # unit (Vitest + WXT fakeBrowser): lib/ and backup import
+npm run test:coverage  # same, with a coverage report in coverage/
+npm run test:e2e       # builds, then runs Playwright against real Chromium with the extension loaded
+npm run test:firefox   # builds for Firefox, then runs the same scenarios in real Firefox (headless)
+```
+
+To try a build by hand, load `dist/chrome-mv3` from `brave://extensions` → Developer mode → **Load unpacked**, or load `dist/firefox-mv3/manifest.json` from `about:debugging` → This Firefox → **Load Temporary Add-on** (gone after a restart).
+
+The E2E suite maps every `*.test` host to a local server, so it can check per-domain and per-site rules across "different" sites. The popup is opened as a tab whose `tabs.query` points at the page under test, since Playwright cannot click the toolbar icon.
+
+`test:firefox` needs Firefox 140+ installed (or `FIREFOX_BIN` pointing at its binary) and exits with an error if it is missing. Playwright cannot load extensions in Firefox, so `e2e-firefox/` drives Firefox through Marionette with a throwaway profile, with no extra dependencies. It covers active and inactive sites, allow rules (global, per site, per script), inline sites, iframes, global blocks, a 47k-domain public list, the popup's script log and badge, and the weekly alarm. It makes no outside network requests unless `AEGIS_FIREFOX_NETWORK=1`, which also checks a real EasyPrivacy download.
+
 ## Releases
 
-[release-please](https://github.com/googleapis/release-please) owns the version and `CHANGELOG.md`: never edit them by hand. It keeps one open Release PR, `chore(main): release X.Y.Z`. Merging that PR tags `vX.Y.Z`, publishes the GitHub Release, and attaches the Chrome and Firefox builds (see the README's Release section).
+[release-please](https://github.com/googleapis/release-please) owns the version and `CHANGELOG.md`: never edit them by hand. Versions follow semver and live in `package.json`; WXT copies them into both manifests. It keeps one open Release PR, `chore(main): release X.Y.Z`, updated on every merge to `main` with the next version and changelog computed from the Conventional Commit messages (`fix` → patch, `feat` → minor, breaking changes → minor while below 1.0).
+
+Merging that PR tags `vX.Y.Z`, publishes the GitHub Release, and attaches `aegis-X.Y.Z-chrome.zip` and `aegis-X.Y.Z-firefox.zip`. When the repo has the `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` secrets, the signed Firefox `.xpi` is attached too.
+
+The extension is not published to the stores. Firefox release builds only keep signed add-ons installed, so the Firefox build is signed on AMO as **unlisted**: never listed in the store, signed automatically, and installable for good from the `.xpi`. To sign locally instead, put the AMO API credentials (addons.mozilla.org → Developer Hub → Manage API Keys) in `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` and run `npm run sign:firefox` (output in `dist/signed/`). Signing uploads the sources zip with the build because the bundle is minified; `wxt.config.ts` keeps `backlog/` and test output out of that zip.
 
 The Release PR is opened with the workflow's own token, so GitHub runs no checks on it, and it only changes the version and changelog. A maintainer merges it past the required check: `gh pr merge <number> --squash --admin`.
 
