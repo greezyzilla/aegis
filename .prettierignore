@@ -1,0 +1,8 @@
+dist/
+.wxt/
+.output/
+coverage/
+test-results/
+playwright-report/
+backlog/
+package-lock.json
