@@ -101,8 +101,9 @@ test.describe('public lists', () => {
       expect.stringMatching(/^›?Script jalan/),
     ]);
     const hit = popup.locator('.list-hit', { hasText: 'cdn.test' });
-    await expect(hit).toContainText('EasyPrivacy · 2 keblok');
-    await expect(popup.locator('.site-summary')).toHaveText('2 diblok global · 3 jalan');
+    await expect(hit).toContainText('EasyPrivacy');
+    await expect(hit.locator('.count')).toHaveText('2');
+    await expect(popup.locator('.flag')).toHaveText(['2 diblok global', '3 jalan']);
     await popup.getByRole('button', { name: 'Izinkan cdn.test dari EasyPrivacy' }).click();
     await expect.poll(async () => (await getSettings()).listAllow).toEqual(['cdn.test']);
     await expect(hit).toContainText('diizinkan');

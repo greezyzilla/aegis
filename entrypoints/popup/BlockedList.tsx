@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ScriptEntry } from '@/lib/types';
+import { Avatar, Count, HostName, Icon, SplitAllow } from './parts';
 
 export interface BlockedGroup {
   host: string;
@@ -9,32 +10,28 @@ export interface BlockedGroup {
 interface Props {
   groups: BlockedGroup[];
   isAllowed: (entry: ScriptEntry) => boolean;
+  isOwn: (host: string) => boolean;
   onAllow: (entries: ScriptEntry[], host: string, scope: 'site' | 'global', script?: string) => void;
+  /** The site was switched on after this page loaded, so nothing on it was blocked yet. */
+  loadedBeforeActive: boolean;
 }
 
-export function BlockedList({ groups, isAllowed, onAllow }: Props) {
+export function BlockedList({ groups, isAllowed, isOwn, onAllow, loadedBeforeActive }: Props) {
   if (groups.length === 0) {
-    return <p className="empty muted">Belum ada script yang keblok di halaman ini.</p>;
+    return (
+      <p className="empty">
+        {loadedBeforeActive
+          ? 'Halaman ini dimuat sebelum blokir aktif. Reload dulu buat lihat script yang keblok.'
+          : 'Belum ada script yang keblok di halaman ini.'}
+      </p>
+    );
   }
   return (
-    <ul className="list" role="list">
+    <ul className="group" role="list">
       {groups.map((g) => (
-        <BlockedHost key={g.host} group={g} isAllowed={isAllowed} onAllow={onAllow} />
+        <BlockedHost key={g.host} group={g} own={isOwn(g.host)} isAllowed={isAllowed} onAllow={onAllow} />
       ))}
     </ul>
-  );
-}
-
-function AllowButtons({ onSite, onGlobal, label }: { onSite: () => void; onGlobal: () => void; label: string }) {
-  return (
-    <div className="actions">
-      <button type="button" className="btn" onClick={onSite} aria-label={`Izinkan ${label} di situs ini`}>
-        Situs ini
-      </button>
-      <button type="button" className="btn" onClick={onGlobal} aria-label={`Izinkan ${label} di semua situs`}>
-        Global
-      </button>
-    </div>
   );
 }
 
@@ -42,10 +39,14 @@ function PendingTag() {
   return <span className="pending">✓ diizinkan</span>;
 }
 
-function BlockedHost({ group, isAllowed, onAllow }: { group: BlockedGroup } & Omit<Props, 'groups'>) {
+function BlockedHost({
+  group,
+  own,
+  isAllowed,
+  onAllow,
+}: { group: BlockedGroup; own: boolean } & Pick<Props, 'isAllowed' | 'onAllow'>) {
   const [open, setOpen] = useState(false);
   const files = groupByFile(group.entries);
-  const allAllowed = group.entries.every(isAllowed);
   const listId = `files-${group.host}`;
 
   return (
@@ -58,16 +59,15 @@ function BlockedHost({ group, isAllowed, onAllow }: { group: BlockedGroup } & Om
           aria-controls={listId}
           onClick={() => setOpen(!open)}
         >
-          <span className="chevron" aria-hidden="true">
-            ›
-          </span>
-          <span className="truncate mono">{group.host}</span>
-          <span className="count">{group.entries.length}</span>
+          <span className="chevron">{Icon.chevron}</span>
+          <Avatar host={group.host} own={own} />
+          <HostName name={group.host} />
+          <Count n={group.entries.length} tone="blocked" />
         </button>
-        {allAllowed ? (
+        {group.entries.every(isAllowed) ? (
           <PendingTag />
         ) : (
-          <AllowButtons
+          <SplitAllow
             label={group.host}
             onSite={() => onAllow(group.entries, group.host, 'site')}
             onGlobal={() => onAllow(group.entries, group.host, 'global')}
@@ -78,14 +78,14 @@ function BlockedHost({ group, isAllowed, onAllow }: { group: BlockedGroup } & Om
         <ul id={listId} className="files" role="list">
           {files.map(([file, entries]) => (
             <li key={file} className="row file">
-              <span className="truncate mono" title={entries[0]?.url}>
-                {file}
-                {entries.length > 1 && <span className="muted"> ×{entries.length}</span>}
+              <span className="file-name" title={entries[0]?.url}>
+                <HostName name={file} className="mono" />
+                <Count n={entries.length} tone="blocked" />
               </span>
               {entries.every(isAllowed) ? (
                 <PendingTag />
               ) : (
-                <AllowButtons
+                <SplitAllow
                   label={file}
                   onSite={() => onAllow(entries, group.host, 'site', file)}
                   onGlobal={() => onAllow(entries, group.host, 'global', file)}

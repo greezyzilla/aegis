@@ -1,8 +1,9 @@
 import { Switch } from '@/components/Switch';
+import { Avatar, Count, HostName } from './parts';
 
 export interface InlineRow {
   host: string;
-  /** Domain stored in inlineSites when toggled on. */
+  /** Domain stored in inlineSites when allowed. */
   site: string;
   isPage: boolean;
   /** Inline scripts blocked in this frame since the page loaded. */
@@ -13,28 +14,27 @@ export interface InlineRow {
 interface Props {
   rows: InlineRow[];
   disabled: boolean;
-  onToggle: (row: InlineRow, on: boolean) => void;
+  onToggle: (row: InlineRow, allow: boolean) => void;
 }
 
+/** One switch per frame. ON means inline scripts are blocked, like every other switch in the popup. */
 export function InlineList({ rows, disabled, onToggle }: Props) {
   return (
-    <ul className="list" role="list">
+    <ul className="group" role="list">
       {rows.map((r) => (
         <li key={r.host} className="row inline-row">
-          <span className="truncate">
-            <span className="mono">{r.host}</span>
-            <span className="muted"> · {r.isPage ? 'halaman ini' : 'iframe'}</span>
+          <span className="row-main">
+            <span className="chevron" />
+            <Avatar host={r.host} own={r.isPage} />
+            <HostName name={r.host} />
+            {r.isPage ? <span className="sr-only">halaman ini</span> : <span className="meta">iframe</span>}
+            {!r.allowed && <Count n={r.blocked} tone="blocked" />}
           </span>
-          {r.blocked > 0 && !r.allowed && (
-            <span className="count" title={`${r.blocked} inline script keblok`}>
-              {r.blocked}
-            </span>
-          )}
           <Switch
-            checked={r.allowed}
+            checked={!r.allowed}
             disabled={disabled}
-            onChange={(on) => onToggle(r, on)}
-            label={`Izinkan inline script di ${r.site}`}
+            onChange={(block) => onToggle(r, !block)}
+            label={`Blok inline script di ${r.site}`}
           />
         </li>
       ))}

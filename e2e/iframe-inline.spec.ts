@@ -64,7 +64,7 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     expect(await ranIn(playerFrame(page))).toEqual({ inline: false, loaded: ['cdn.test/lib/a.js'] });
     const popup = await openPopup(page);
 
-    await popup.getByRole('switch', { name: 'Izinkan inline script di player.test' }).click();
+    await popup.getByRole('switch', { name: 'Blok inline script di player.test' }).click();
     await expect.poll(async () => (await getSettings()).inlineSites).toEqual(['player.test']);
     await reloadFromPopup(popup, page);
 
@@ -82,8 +82,8 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     expect((await ranIn(playerFrame(page))).inline).toBe(true);
     const popup = await openPopup(page);
 
-    const toggle = popup.getByRole('switch', { name: 'Izinkan inline script di player.test' });
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    const toggle = popup.getByRole('switch', { name: 'Blok inline script di player.test' });
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
     await toggle.click();
     await reloadFromPopup(popup, page);
     await expect.poll(async () => (await ranIn(playerFrame(page))).inline).toBe(false);
