@@ -1,13 +1,15 @@
 import { useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
+import { t } from '@/lib/i18n';
+import { LIST_IDS, LISTS } from '@/lib/lists';
 import { addBlocks, addRules, isAutoReload, removeSite, setAutoReload, setSiteFlag } from '@/lib/settings';
 import { useSettings } from '@/lib/useSettings';
+import { Section } from '../popup/Section';
 import { exportSettings, importSettings } from './backup';
-import { BlockTable } from './BlockTable';
-import { LISTS } from '@/lib/lists';
+import { BlockList } from './BlockList';
 import { PublicLists, requestRefresh } from './PublicLists';
 import { RuleForm } from './RuleForm';
-import { RuleTable } from './RuleTable';
+import { RuleList } from './RuleList';
 import { SiteList } from './SiteList';
 
 export default function App() {
@@ -36,154 +38,175 @@ export default function App() {
     if (!file) return;
     try {
       const { count, listsToEnable } = await importSettings(file);
-      let text = `${count} rule dibaca dan digabung (duplikat dilewati).`;
+      let text = t.importRead(count);
       let error = false;
       // Lists come back on only once their data is downloaded again.
       for (const id of listsToEnable) {
         const res = await requestRefresh(id).catch((err: Error) => ({ ok: false as const, error: err.message }));
-        text += res.ok ? ` ${LISTS[id].name} diaktifkan.` : ` ${LISTS[id].name} belum aktif: ${res.error}`;
+        text += ' ' + (res.ok ? t.listEnabled(LISTS[id].name) : t.listNotEnabled(LISTS[id].name, res.error));
         error ||= !res.ok;
       }
       setStatus({ text, error });
     } catch (err) {
-      setStatus({ text: `Import gagal: ${(err as Error).message}`, error: true });
+      setStatus({ text: t.importFailed((err as Error).message), error: true });
     } finally {
       if (fileRef.current) fileRef.current.value = '';
     }
   };
 
+  const rulesOn = (site: string) => settings.rules.filter((r) => r.scope === site).length;
+
   return (
-    <main className="options">
-      <header className="options-header">
-        <div>
-          <h1>Aegis</h1>
-          <p className="muted">
-            Di situs aktif semua script keblok, rule izin nentuin mana yang boleh lolos. Blok global berlaku di semua
-            situs.
-          </p>
+    <main className="opt">
+      <header className="site site-active">
+        <div className="site-top">
+          <div className="brand">
+            <img src="/icon/32.png" alt="" width={20} height={20} />
+            <h1>Aegis</h1>
+          </div>
+        </div>
+        <p className="site-host">{t.optionsHeading}</p>
+        <p className="site-sub">{t.intro}</p>
+        <div className="flags">
+          <span className="flag">
+            <span className="dot dot-allowed" />
+            {t.summarySites(settings.activeSites.length)}
+          </span>
+          <span className="flag">
+            <span className="dot dot-allowed" />
+            {t.summaryRules(settings.rules.length)}
+          </span>
+          <span className="flag">
+            <span className="dot dot-blocked" />
+            {t.summaryBlocks(settings.blocks.length)}
+          </span>
+          {LIST_IDS.map((id) => {
+            const on = settings.lists.includes(id);
+            return (
+              <span key={id} className="flag">
+                <span className={`dot ${on ? 'dot-blocked' : 'dot-neutral'}`} />
+                {t.summaryList(LISTS[id].name, on)}
+              </span>
+            );
+          })}
         </div>
       </header>
 
       <SiteList
-        title="Situs aktif"
-        description="Semua script keblok di sini, kecuali yang diizinkan rule izin."
+        id="active-title"
+        title={t.activeSitesTitle}
+        aside={t.activeSitesAside}
         sites={settings.activeSites}
         onAdd={(site) => setSiteFlag('activeSites', site, site, true)}
-        addLabel="Tambah situs aktif"
+        addLabel={t.addActiveSite}
         onRemove={(s) => void removeSite('activeSites', s)}
+        extra={(s) => (
+          <>
+            {rulesOn(s) > 0 && <span className="count count-allowed">{t.ruleCount(rulesOn(s))}</span>}
+            {settings.inlineSites.includes(s) && <span className="count count-allowed">{t.inlineTag}</span>}
+          </>
+        )}
       />
 
-      <section className="card">
-        <h2>
-          Blok global <span className="muted">({settings.blocks.length})</span>
-        </h2>
-        <p className="muted">Diblok di semua situs, aktif atau nggak, dan menang lawan rule izin.</p>
-        <RuleForm
-          submitLabel="Blok"
-          withScope={false}
-          onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
-        />
-        <BlockTable blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))} />
-      </section>
+      <Section id="rules-title" title={t.allowRulesTitle} count={settings.rules.length} aside={t.rulesAside}>
+        <div className="filters">
+          <input
+            type="search"
+            className="input"
+            aria-label={t.searchRules}
+            placeholder={t.searchPlaceholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <select
+            className="input input-select"
+            aria-label={t.filterScope}
+            value={scopeFilter}
+            onChange={(e) => setScopeFilter(e.target.value)}
+          >
+            <option value="all">{t.all}</option>
+            <option value="global">{t.global}</option>
+            {sites.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <ul className="group" role="list">
+          <li>
+            <RuleForm submitLabel={t.add} onSubmit={(r) => addRules([r])} />
+          </li>
+          <RuleList rules={filtered} emptyText={settings.rules.length ? t.noMatch : t.noRules} />
+        </ul>
+      </Section>
+
+      <Section id="blocks-title" title={t.globalBlocksTitle} count={settings.blocks.length} aside={t.globalBlocksAside}>
+        <ul className="group" role="list">
+          <li>
+            <RuleForm
+              submitLabel={t.block}
+              withScope={false}
+              onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
+            />
+          </li>
+          <BlockList blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))} />
+        </ul>
+      </Section>
 
       <PublicLists settings={settings} />
 
-      <section className="card">
-        <h2>Tambah rule izin</h2>
-        <RuleForm submitLabel="Tambah" onSubmit={(r) => addRules([r])} />
-        <p className="muted hint">
-          Domain ikut nge-cover subdomain-nya (<span className="mono">example.com</span> →{' '}
-          <span className="mono">cdn.example.com</span>). Nama script dicocokkan ke path URL,{' '}
-          <span className="mono">*</span> jadi wildcard.
-        </p>
-      </section>
-
-      <section className="card">
-        <div className="card-head">
-          <h2>
-            Rule izin <span className="muted">({settings.rules.length})</span>
-          </h2>
-          <div className="filters">
-            <input
-              type="search"
-              className="input"
-              aria-label="Cari rule"
-              placeholder="Cari domain, script, situs…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <select
-              className="input"
-              aria-label="Filter berlaku di"
-              value={scopeFilter}
-              onChange={(e) => setScopeFilter(e.target.value)}
-            >
-              <option value="all">Semua</option>
-              <option value="global">Global</option>
-              {sites.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <RuleTable
-          rules={filtered}
-          emptyText={
-            settings.rules.length ? 'Nggak ada rule yang cocok.' : 'Belum ada rule. Tambah di atas atau dari popup.'
-          }
-        />
-      </section>
-
       <SiteList
-        title="Inline script diizinkan"
-        description="Script inline di HTML boleh jalan di situs ini, sebagai halaman atau iframe (mis. player video)."
+        id="inline-title"
+        title={t.inlineTitle}
+        aside={t.inlineAside}
         sites={settings.inlineSites}
         onAdd={(site) => setSiteFlag('inlineSites', site, site, true)}
-        addLabel="Tambah situs inline"
+        addLabel={t.addInlineSite}
         onRemove={(s) => void removeSite('inlineSites', s)}
       />
 
-      <div className="grid-2">
-        <section className="card">
-          <h2>Pengaturan</h2>
-          <Switch
-            checked={isAutoReload(settings)}
-            onChange={(v) => void setAutoReload(v)}
-            label="Reload otomatis saat popup ditutup"
-          >
-            <span>
-              Reload otomatis saat popup ditutup
-              <span className="muted block">Kalau ada perubahan di popup, tab-nya di-reload sekali.</span>
-            </span>
-          </Switch>
-        </section>
+      <div className="two">
+        <Section id="settings-title" title={t.settingsTitle}>
+          <ul className="group" role="list">
+            <li className="row">
+              <span className="row-text">
+                <b>{t.autoReload}</b>
+                <span>{t.autoReloadDesc}</span>
+              </span>
+              <Switch checked={isAutoReload(settings)} onChange={(v) => void setAutoReload(v)} label={t.autoReload} />
+            </li>
+          </ul>
+        </Section>
 
-        <section className="card">
-          <h2>Backup</h2>
-          <p className="muted">Import digabung ke rule yang ada, bukan menimpa.</p>
-          <div className="form-actions">
-            <button type="button" className="btn" onClick={() => exportSettings(settings)}>
-              Export JSON
-            </button>
-            <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-              Import JSON
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json,.json"
-              hidden
-              onChange={(e) => void onImport(e.target.files?.[0])}
-            />
-          </div>
+        <Section id="backup-title" title={t.backupTitle}>
+          <ul className="group" role="list">
+            <li className="row">
+              <span className="row-text">
+                <b>{t.backupRow}</b>
+                <span>{t.backupDesc}</span>
+              </span>
+              <button type="button" className="btn" onClick={() => exportSettings(settings)}>
+                {t.exportBtn}
+              </button>
+              <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+                {t.importBtn}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => void onImport(e.target.files?.[0])}
+              />
+            </li>
+          </ul>
           {status && (
-            <p className={`notice ${status.error ? 'notice-error' : ''}`} role="status">
+            <p className={`notice status ${status.error ? 'notice-error' : ''}`} role="status">
               {status.text}
             </p>
           )}
-        </section>
+        </Section>
       </div>
     </main>
   );

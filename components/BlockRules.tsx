@@ -1,4 +1,5 @@
 import type { BlockRule } from '@/lib/types';
+import { t } from '@/lib/i18n';
 
 interface Props {
   blocks: BlockRule[];
@@ -26,9 +27,9 @@ export function BlockRules({ blocks, emptyText, onRemove, note }: Props) {
               type="button"
               className="btn btn-ghost btn-danger"
               onClick={() => onRemove(b.id)}
-              aria-label={`Hapus blok ${label}`}
+              aria-label={t.removeBlockLabel(label)}
             >
-              Hapus
+              {t.remove}
             </button>
           </li>
         );

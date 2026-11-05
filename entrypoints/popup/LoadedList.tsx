@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ScriptEntry } from '@/lib/types';
 import { Avatar, Count, HostName, Icon } from './parts';
+import { t } from '@/lib/i18n';
 
 export interface LoadedGroup {
   host: string;
@@ -17,7 +18,7 @@ interface Props {
 /** Scripts that ran on this page, each one blockable on every site (except the site's own). */
 export function LoadedList({ groups, isBlocked, isOwn, onBlock }: Props) {
   if (groups.length === 0) {
-    return <p className="empty">Belum ada script yang jalan di halaman ini.</p>;
+    return <p className="empty">{t.noLoaded}</p>;
   }
   return (
     <ul className="group" role="list">
@@ -30,15 +31,15 @@ export function LoadedList({ groups, isBlocked, isOwn, onBlock }: Props) {
 
 function BlockButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" className="btn" onClick={onClick} aria-label={`Blok ${label} di semua situs`}>
+    <button type="button" className="btn" onClick={onClick} aria-label={t.blockEverywhereLabel(label)}>
       {Icon.ban}
-      Blok
+      {t.block}
     </button>
   );
 }
 
 function BlockedTag() {
-  return <span className="pending pending-block">✓ diblok</span>;
+  return <span className="pending pending-block">{t.blockedTag}</span>;
 }
 
 function LoadedHost({

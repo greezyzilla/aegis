@@ -1,0 +1,6 @@
+{
+  "extName": { "message": "Aegis" },
+  "extDescription": {
+    "message": "Blocks scripts on the sites you turn on, plus global blocks for trackers and the like."
+  }
+}

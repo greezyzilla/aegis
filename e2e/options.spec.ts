@@ -4,10 +4,13 @@ import { block, DEFAULTS, expect, rule, test } from './fixtures';
 
 const LIST_URL = 'https://easylist.to/easylist/easyprivacy.txt';
 
+const rulesSection = (page: Page) => page.getByRole('region', { name: /^Rule izin/ });
+
+/** Opens the page and returns the add form at the top of "Rule izin". */
 async function openOptions(page: Page, extensionId: string) {
   await page.goto(`chrome-extension://${extensionId}/options.html`);
-  await page.getByRole('heading', { name: 'Tambah rule izin' }).waitFor();
-  return page.getByRole('heading', { name: 'Tambah rule izin' }).locator('..');
+  await rulesSection(page).waitFor();
+  return rulesSection(page).locator('form').first();
 }
 
 test.describe('options page', () => {
@@ -44,7 +47,8 @@ test.describe('options page', () => {
     await form.getByLabel('Nama script').fill('a.js');
     await form.getByRole('button', { name: 'Tambah' }).click();
 
-    await expect(page.getByRole('row', { name: /cdn\.test a\.js Global/ })).toBeVisible();
+    await expect(rulesSection(page).locator('.rule-item', { hasText: 'cdn.test / a.js' })).toBeVisible();
+    await expect(rulesSection(page).locator('.scope-head .host-name')).toHaveText(['Semua situs']);
     await expect
       .poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length))
       .toBe(4);
@@ -77,15 +81,13 @@ test.describe('options page', () => {
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
-    await page
-      .getByRole('row', { name: /other\.test/ })
-      .getByRole('button', { name: 'Edit' })
-      .click();
-    const editRow = page.locator('tbody tr').first();
+    await page.getByRole('button', { name: 'Edit rule other.test' }).click();
+    const editRow = rulesSection(page).locator('.edit');
     await editRow.getByLabel('Berlaku di').selectOption('site');
     await editRow.getByLabel('Situs', { exact: true }).fill('site-a.test');
     await editRow.getByRole('button', { name: 'Simpan' }).click();
-    await expect(page.getByRole('row', { name: /other\.test semua site-a\.test/ })).toBeVisible();
+    await expect(editRow).toHaveCount(0);
+    await expect(rulesSection(page).locator('.scope-head .host-name')).toHaveText(['site-a.test']);
 
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).toEqual(['other.test/d.js']);
     expect((await ran(await visit('site-b.test'))).loaded).toEqual([]);
@@ -101,14 +103,14 @@ test.describe('options page', () => {
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).toEqual([]);
   });
 
-  test('search and scope filter narrow the table', async ({ setSettings, context, extensionId }) => {
+  test('search and scope filter narrow the list', async ({ setSettings, context, extensionId }) => {
     await setSettings({
       ...DEFAULTS,
       rules: [rule('cdn.test'), rule('other.test', 'site-a.test'), rule('x.test', 'site-b.test')],
     });
     const page = await context.newPage();
     await openOptions(page, extensionId);
-    const rows = page.locator('tbody tr');
+    const rows = rulesSection(page).locator('.rule-item');
 
     await expect(rows).toHaveCount(3);
     await page.getByLabel('Cari rule').fill('other');
@@ -131,7 +133,7 @@ test.describe('options page', () => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
-    const card = page.getByRole('heading', { name: /^Blok global/ }).locator('..');
+    const card = page.getByRole('region', { name: /^Blok global/ });
 
     await expect(card.getByLabel('Berlaku di')).toHaveCount(0);
     await card.getByLabel('Domain script').fill('https://Other.test/x');
@@ -154,7 +156,7 @@ test.describe('options page', () => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
-    const card = page.getByRole('heading', { name: /^Blok global/ }).locator('..');
+    const card = page.getByRole('region', { name: /^Blok global/ });
 
     await card.getByLabel('Domain script').fill('not a domain');
     await card.getByLabel('Nama script').fill('bad name.js');
@@ -166,7 +168,7 @@ test.describe('options page', () => {
     await card.getByLabel('Domain script').fill('ads.test');
     await card.getByLabel('Nama script').fill('pixel.js');
     await card.getByRole('button', { name: 'Blok', exact: true }).click();
-    await expect(card.getByRole('row', { name: /ads\.test pixel\.js/ })).toBeVisible();
+    await expect(card.locator('.block-rule', { hasText: 'ads.test / pixel.js' })).toBeVisible();
     expect((await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['ads.test', 'pixel.js']]);
 
     // Same block again is ignored.
@@ -233,7 +235,7 @@ test.describe('options page', () => {
     await expect.poll(async () => (await ran(await visit('www.site-a.test'))).loaded).toEqual([]);
   });
 
-  test('cards follow the model: active sites and global blocks first, settings and backup last', async ({
+  test('sections follow the model: active sites and rules first, settings and backup last', async ({
     setSettings,
     context,
     extensionId,
@@ -241,12 +243,12 @@ test.describe('options page', () => {
     await setSettings(DEFAULTS);
     const page = await context.newPage();
     await openOptions(page, extensionId);
-    const titles = (await page.locator('.card > h2').allTextContents()).map((t) => t.replace(/\s*\(\d+\)$/, ''));
+    const titles = (await page.locator('.section-title').allTextContents()).map((t) => t.replace(/\d+$/, ''));
     expect(titles).toEqual([
       'Situs aktif',
+      'Rule izin',
       'Blok global',
       'Daftar publik',
-      'Tambah rule izin',
       'Inline script diizinkan',
       'Pengaturan',
       'Backup',
@@ -294,7 +296,7 @@ test.describe('options page', () => {
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Export JSON' }).click(),
+      page.getByRole('button', { name: 'Export', exact: true }).click(),
     ]);
     const file = testInfo.outputPath('backup.json');
     await download.saveAs(file);

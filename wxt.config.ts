@@ -11,8 +11,10 @@ export default defineConfig({
     excludeSources: ['backlog/**', 'coverage/**', 'test-results/**', 'playwright-report/**'],
   },
   manifest: ({ browser }) => ({
-    name: 'Aegis',
-    description: 'Blok script di situs yang kamu aktifkan, plus blok global untuk tracker dkk.',
+    // Text in public/_locales; English unless the browser is Indonesian, like the UI (lib/i18n).
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
+    default_locale: 'en',
     permissions: ['declarativeNetRequest', 'webRequest', 'storage', 'tabs', 'alarms'],
     host_permissions: ['<all_urls>'],
     ...(browser === 'firefox' && {
@@ -22,6 +24,8 @@ export default defineConfig({
           // 140 (ESR): needed for data_collection_permissions; also covers DNR modifyHeaders (128+).
           strict_min_version: '140.0',
           data_collection_permissions: { required: ['none'] },
+          // Self-hosted updates: each release attaches an updates.json (see release.yml).
+          update_url: 'https://github.com/greezyzilla/aegis/releases/latest/download/updates.json',
         },
         // Firefox for Android only supports data_collection_permissions from 142.
         gecko_android: { strict_min_version: '142.0' },

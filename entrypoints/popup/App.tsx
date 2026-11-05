@@ -25,6 +25,7 @@ import { GlobalBlocks, type ListHit } from './ListHits';
 import { LoadedList, type LoadedGroup } from './LoadedList';
 import { Section } from './Section';
 import { useActiveTab } from './useActiveTab';
+import { t } from '@/lib/i18n';
 
 export default function App() {
   const settings = useSettings();
@@ -42,6 +43,8 @@ export default function App() {
 
   const pageHost = hostFromUrl(tab?.url);
   const site = pageHost ? siteOf(pageHost) : null;
+  // Before the memo: the compiler treats any call taking `site` as a possible mutation of it.
+  const activateLabel = site ? t.activateOn(site) : '';
 
   const view = useMemo(() => {
     if (!settings || !pageHost) return null;
@@ -146,14 +149,14 @@ export default function App() {
           </header>
           {syncError && (
             <p className="notice notice-error" role="alert">
-              Gagal menerapkan rule: {syncError}
+              {t.syncFailed(syncError)}
             </p>
           )}
-          <p className="empty muted">Halaman ini nggak bisa diatur (bukan http/https).</p>
+          <p className="empty muted">{t.notControllable}</p>
         </>
       ) : (
         <>
-          <header className={`site${view.active ? ' site-active' : ''}`} aria-label="Pengaturan situs ini">
+          <header className={`site${view.active ? ' site-active' : ''}`} aria-label={t.siteSettings}>
             <div className="site-top">
               <Brand />
               <Switch
@@ -162,31 +165,31 @@ export default function App() {
                   setJustActivated(v);
                   act(setSiteFlag('activeSites', pageHost, site, v));
                 }}
-                label={`Aktifkan blokir di ${site}`}
+                label={activateLabel}
               />
             </div>
             <p className="site-host">{pageHost}</p>
             <div className="flags">
               <span className="flag">
                 <span className="dot dot-blocked" />
-                {view.active ? `${view.blocked} keblok` : `${view.blocked} diblok global`}
+                {view.active ? t.flagBlocked(view.blocked) : t.flagBlockedGlobal(view.blocked)}
               </span>
               <span className="flag">
                 <span className={`dot ${view.active ? 'dot-allowed' : 'dot-neutral'}`} />
-                {view.active ? `${view.loaded} lolos` : `${view.loaded} jalan`}
+                {view.active ? t.flagAllowed(view.loaded) : t.flagRan(view.loaded)}
               </span>
             </div>
           </header>
 
           {syncError && (
             <p className="notice notice-error" role="alert">
-              Gagal menerapkan rule: {syncError}
+              {t.syncFailed(syncError)}
             </p>
           )}
 
           {view.active && (
             <>
-              <Section id="blocked-title" title="Keblok di halaman ini">
+              <Section id="blocked-title" title={t.sectionBlocked}>
                 <BlockedList
                   groups={view.groups}
                   isAllowed={view.isAllowed}
@@ -196,7 +199,7 @@ export default function App() {
                 />
               </Section>
 
-              <Section id="inline-title" title="Inline script">
+              <Section id="inline-title" title={t.sectionInline}>
                 <InlineList
                   rows={view.inlineRows}
                   disabled={false}
@@ -204,7 +207,7 @@ export default function App() {
                 />
               </Section>
 
-              <Section id="rules-title" title="Diizinkan">
+              <Section id="rules-title" title={t.sectionAllowed}>
                 <ActiveRules
                   rules={view.activeRules}
                   allowedBy={view.allowedBy}
@@ -216,7 +219,7 @@ export default function App() {
           )}
 
           {(!view.active || view.pageBlocks.length > 0 || view.listHits.length > 0) && (
-            <Section id="global-blocks-title" title="Diblok global">
+            <Section id="global-blocks-title" title={t.sectionGlobal}>
               <GlobalBlocks
                 blocks={view.pageBlocks}
                 blockedBy={view.blockedBy}
@@ -231,7 +234,7 @@ export default function App() {
           {/* On an active site these are only the allowed scripts, so keep them folded away. */}
           <Section
             id="loaded-title"
-            title="Script jalan"
+            title={t.sectionLoaded}
             count={view.loaded}
             collapsible={view.active}
             defaultOpen={!view.active}
@@ -243,7 +246,7 @@ export default function App() {
 
       {changed && tab && (
         <div className="notice reload" role="status">
-          <span>{isAutoReload(settings) ? 'Tab di-reload saat ditutup.' : 'Perubahan berlaku setelah reload.'}</span>
+          <span>{isAutoReload(settings) ? t.reloadOnClose : t.reloadToApply}</span>
           <button
             type="button"
             className="btn btn-primary"
@@ -253,14 +256,14 @@ export default function App() {
               notify({ type: 'reloaded' });
             }}
           >
-            {isAutoReload(settings) ? 'Reload sekarang' : 'Reload'}
+            {isAutoReload(settings) ? t.reloadNow : t.reload}
           </button>
         </div>
       )}
 
       <footer className="popup-footer">
         <button type="button" className="btn btn-ghost btn-link" onClick={() => browser.runtime.openOptionsPage()}>
-          Kelola semua rule →
+          {t.manageRules}
         </button>
       </footer>
     </main>

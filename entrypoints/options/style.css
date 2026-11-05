@@ -1,264 +1,157 @@
-@import '../../styles/base.css';
+/* The popup's rows, avatars, counts and header, laid out for a full tab. */
+@import '../popup/style.css';
 
-.options {
-  max-width: 860px;
+body {
+  background: var(--bg);
+}
+
+.opt {
+  max-width: 760px;
   margin: 0 auto;
-  padding: 32px 24px 64px;
-  display: grid;
-  gap: 16px;
-  font-size: 14px;
+  padding: 24px 24px 64px;
 }
 
-.options-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-.options-header h1 {
-  font-size: 20px;
-}
-.options-header p {
-  margin: 4px 0 0;
-}
-
-.card {
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.card h2 {
-  font-size: 14px;
-  margin-bottom: 12px;
-}
-.card > p {
-  margin: -8px 0 12px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Summary header: the popup's active-site glass, about every rule at once. */
+.opt .site {
+  margin: 0 0 8px;
+  padding: 18px 20px 20px;
   gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
 }
-.card-head h2 {
+.opt .site-host {
+  font-size: 22px;
+}
+.site-sub {
+  margin: 0;
+  max-width: 560px;
+  font-size: 12.5px;
+  color: rgb(255 255 255 / 0.82);
+}
+
+.opt .section-head {
+  padding: 26px 10px 8px;
+}
+.opt .group {
   margin: 0;
 }
-.hint {
-  margin: 12px 0 0 !important;
-  font-size: 12px;
+.opt .section-aside {
+  text-align: right;
 }
 
-.filters {
+.lead-ico {
+  flex: none;
   display: flex;
-  gap: 8px;
-}
-.filters input {
-  width: 240px;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 
-.rule-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.3fr auto;
-  align-items: start;
-  gap: 12px;
+/* The first row of a group adds to it. */
+.add-row {
+  gap: 8px;
+  background: var(--sunken);
 }
-.rule-form-noscope {
-  grid-template-columns: 1fr 1fr auto;
+.group > li:first-child .add-row {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
-.field {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
+.add-row .input {
+  flex: 1;
 }
-.field label {
-  font-size: 12px;
-  color: var(--muted);
+.add-row .input-narrow {
+  flex: 0.8;
+}
+.add-row .input-select {
+  flex: 0 0 150px;
+}
+.form-errors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 0 10px 8px;
+  background: var(--sunken);
 }
 .field-error {
   font-size: 12px;
   color: var(--blocked);
 }
-.scope-input {
-  display: flex;
-  gap: 6px;
-}
-.scope-input > * {
-  flex: 1;
-}
-.form-actions {
+
+.filters {
   display: flex;
   gap: 8px;
-  align-self: end;
+  padding: 0 0 8px;
 }
-.form-actions .btn {
-  height: 30px;
+.filters .input {
+  flex: 1;
+}
+.filters .input-select {
+  flex: 0 0 170px;
 }
 
-.rules {
-  width: 100%;
-  border-collapse: collapse;
+/* Rules under the heading of where they apply. */
+.scope-head {
+  min-height: 40px;
+  background: var(--sunken);
 }
-.rules th {
-  text-align: left;
-  font-weight: 500;
+.scope-head .host-name {
+  font-weight: 600;
+}
+.rule-row {
+  padding-left: 32px;
+}
+.edit {
+  padding: 0 0 2px 32px;
+  background: var(--sunken);
+  border-top: 1px solid var(--line);
+}
+.edit .add-row,
+.edit .form-errors {
+  background: transparent;
+}
+
+.empty-row {
   font-size: 12px;
   color: var(--muted);
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-}
-.rules td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-  word-break: break-all;
-}
-.rules tr:last-child td {
-  border-bottom: none;
-}
-.rules td .rule-form {
-  padding: 6px 0;
-}
-.row-actions {
-  text-align: right;
-  white-space: nowrap;
-  width: 1%;
 }
 
-.grid-2 {
+.row-text {
+  flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 2px;
+  min-width: 0;
 }
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.row-text b {
+  font-weight: 500;
 }
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 4px 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-}
-.chip-remove {
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  cursor: pointer;
+.row-text span {
+  font-size: 11.5px;
   color: var(--muted);
 }
-.chip-remove:hover {
+
+.list-note {
+  margin: -4px 0 0;
+  padding: 0 10px 10px 40px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.list-note.field-error {
   color: var(--blocked);
 }
 
-.empty {
-  margin: 0;
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
-.notice {
-  margin: 12px 0 0;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
 @media (max-width: 720px) {
-  .rule-form,
-  .grid-2 {
+  .two {
     grid-template-columns: 1fr;
   }
-  .filters {
-    width: 100%;
-  }
-  .filters input {
-    flex: 1;
-    width: auto;
-  }
 }
 
-.card > .switch-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-}
-.block {
-  display: block;
-  margin-top: 2px;
+.status {
+  margin: 8px 0 0;
   font-size: 12px;
-}
-
-.card form + .empty,
-.card form + .rules,
-.card form + .chips {
-  margin-top: 12px;
-}
-
-.site-add {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.site-add .input {
-  flex: 1;
-  max-width: 320px;
-}
-.site-add .btn {
-  height: 30px;
-}
-.site-add .field-error {
-  flex-basis: 100%;
-}
-
-.public-lists {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.public-list {
-  display: grid;
-  gap: 8px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
-}
-.public-list:last-child {
-  border-bottom: 1px solid var(--border);
-}
-.public-list-head,
-.public-list-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.public-list-name {
-  font-weight: 600;
-}
-.public-list-meta {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.public-list .field-error,
-.public-list .block {
-  margin: 0;
-}
-.subhead {
-  margin: 16px 0 8px;
-  font-size: 13px;
 }

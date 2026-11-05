@@ -2,6 +2,7 @@ import { isValidDomain, isValidScript, normalizeDomain, normalizeScript } from '
 import { isListId, type ListId } from '@/lib/lists';
 import { addBlocks, addRules, updateSettings } from '@/lib/settings';
 import type { NewBlock, NewRule, Settings } from '@/lib/types';
+import { t } from '@/lib/i18n';
 
 /**
  * v1 also had `pausedSites` (ignored on import) and no blocks/activeSites; v2 had no lists/listAllow.
@@ -50,7 +51,7 @@ const cleanSites = (v: unknown): string[] =>
 /** Merges a backup into the current settings. Invalid entries are skipped. */
 export async function importSettings(file: File): Promise<ImportResult> {
   const data = JSON.parse(await file.text()) as Partial<Backup>;
-  if (data.app !== 'aegis' || !Array.isArray(data.rules)) throw new Error('Bukan file backup Aegis');
+  if (data.app !== 'aegis' || !Array.isArray(data.rules)) throw new Error(t.notBackup);
 
   const rules: NewRule[] = [];
   for (const raw of data.rules) {

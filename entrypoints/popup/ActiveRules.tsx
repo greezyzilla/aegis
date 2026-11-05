@@ -1,5 +1,6 @@
 import type { AllowRule } from '@/lib/types';
 import { Avatar, Count, HostName, Icon } from './parts';
+import { t } from '@/lib/i18n';
 
 interface Props {
   rules: AllowRule[];
@@ -11,7 +12,7 @@ interface Props {
 
 export function ActiveRules({ rules, allowedBy, isOwn, onRemove }: Props) {
   if (rules.length === 0) {
-    return <p className="empty">Belum ada rule yang berlaku di sini.</p>;
+    return <p className="empty">{t.noActiveRules}</p>;
   }
   return (
     <ul className="group" role="list">
@@ -21,21 +22,21 @@ export function ActiveRules({ rules, allowedBy, isOwn, onRemove }: Props) {
         return (
           <li key={r.id} className="row rule">
             <span className="row-main">
-              <span className="chevron lead" title={global ? 'Semua situs' : `Hanya di ${r.scope}`}>
+              <span className="chevron lead" title={global ? t.everySite : t.onlyOn(r.scope)}>
                 {global ? Icon.globe : Icon.home}
               </span>
               <Avatar host={r.domain} own={isOwn(r.domain)} />
               <HostName name={r.script ? `${r.domain} / ${r.script}` : r.domain} />
               <Count n={allowedBy(r)} tone="allowed" />
-              <span className="sr-only">{global ? 'semua situs' : `hanya di ${r.scope}`}</span>
+              <span className="sr-only">{global ? t.everySiteLower : t.onlyOnLower(r.scope)}</span>
             </span>
             <button
               type="button"
               className="btn btn-ghost"
               onClick={() => onRemove(r.id)}
-              aria-label={`Hapus rule ${label}`}
+              aria-label={t.removeRuleLabel(label)}
             >
-              Hapus
+              {t.remove}
             </button>
           </li>
         );
