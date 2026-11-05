@@ -72,7 +72,7 @@ Merging that PR tags `vX.Y.Z`, publishes the GitHub Release, and attaches `aegis
 
 The extension is not published to the stores. Firefox release builds only keep signed add-ons installed, so the Firefox build is signed on AMO as **unlisted**: never listed in the store, signed automatically, and installable for good from the `.xpi`. To sign locally instead, put the AMO API credentials (addons.mozilla.org → Developer Hub → Manage API Keys) in `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` and run `npm run sign:firefox` (output in `dist/signed/`). Signing uploads the sources zip with the build because the bundle is minified; `wxt.config.ts` keeps `backlog/` and test output out of that zip.
 
-The Release PR is opened with the workflow's own token, so GitHub runs no checks on it, and it only changes the version and changelog. A maintainer merges it past the required check: `gh pr merge <number> --squash --admin`.
+The Release PR is opened and updated by the workflow's own token, and the repo is public, so GitHub holds its checks: `check` waits for approval and `pr-title` does not start. A maintainer starts them: `gh pr update-branch <number>` when the branch is behind `main`, otherwise close and reopen the PR. Merge it once both pass, like any other PR: `gh pr merge <number> --squash`. Never merge past the ruleset with `--admin`.
 
 ## Dependencies
 
