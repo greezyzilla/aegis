@@ -17,7 +17,11 @@
   --radius-sm: 4px;
   --radius: 6px;
 
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
   font-size: 13px;
   line-height: 1.4;
   color: var(--text);

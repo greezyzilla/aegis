@@ -51,7 +51,17 @@ describe('importSettings', () => {
     await addRules([{ domain: 'cdn.test', scope: 'global' }]);
     await setSiteFlag('activeSites', 'a.test', 'a.test', true);
     await importSettings(
-      file({ app: 'aegis', version: 2, rules: [{ domain: 'cdn.test', scope: 'global' }, { domain: 'new.test', scope: 'global' }], blocks: [], activeSites: ['a.test', 'b.test'], inlineSites: [] }),
+      file({
+        app: 'aegis',
+        version: 2,
+        rules: [
+          { domain: 'cdn.test', scope: 'global' },
+          { domain: 'new.test', scope: 'global' },
+        ],
+        blocks: [],
+        activeSites: ['a.test', 'b.test'],
+        inlineSites: [],
+      }),
     );
     const s = await settingsItem.getValue();
     expect(s.rules.map((r) => r.domain)).toEqual(['cdn.test', 'new.test']);
@@ -60,7 +70,13 @@ describe('importSettings', () => {
 
   it('still reads a v1 backup, ignoring its paused sites', async () => {
     const n = await importSettings(
-      file({ app: 'aegis', version: 1, rules: [{ domain: 'cdn.test', scope: 'global' }], pausedSites: ['a.test'], inlineSites: ['b.test'] }),
+      file({
+        app: 'aegis',
+        version: 1,
+        rules: [{ domain: 'cdn.test', scope: 'global' }],
+        pausedSites: ['a.test'],
+        inlineSites: ['b.test'],
+      }),
     );
     expect(n).toEqual({ count: 1, listsToEnable: [] });
     const s = await settingsItem.getValue();
@@ -91,13 +107,24 @@ describe('importSettings', () => {
 
   it('does not ask to enable a list that is already on', async () => {
     await updateSettings((x) => ({ ...x, lists: ['easyprivacy'] }));
-    const r = await importSettings(file({ app: 'aegis', version: 3, rules: [], lists: ['easyprivacy'], listAllow: [] }));
+    const r = await importSettings(
+      file({ app: 'aegis', version: 3, rules: [], lists: ['easyprivacy'], listAllow: [] }),
+    );
     expect(r.listsToEnable).toEqual([]);
   });
 
   it('a v2 backup leaves lists and overrides untouched', async () => {
     await updateSettings((x) => ({ ...x, lists: ['easyprivacy'], listAllow: ['keep.test'] }));
-    const r = await importSettings(file({ app: 'aegis', version: 2, rules: [{ domain: 'cdn.test', scope: 'global' }], blocks: [], activeSites: [], inlineSites: [] }));
+    const r = await importSettings(
+      file({
+        app: 'aegis',
+        version: 2,
+        rules: [{ domain: 'cdn.test', scope: 'global' }],
+        blocks: [],
+        activeSites: [],
+        inlineSites: [],
+      }),
+    );
     expect(r).toEqual({ count: 1, listsToEnable: [] });
     const s = await settingsItem.getValue();
     expect([s.lists, s.listAllow]).toEqual([['easyprivacy'], ['keep.test']]);

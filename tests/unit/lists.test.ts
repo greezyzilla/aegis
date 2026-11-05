@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { downloadList, listDataItem, listErrorItem, listMatcher, MIN_LIST_DOMAINS, parseFilterList, urlFilterRegExp } from '@/lib/lists';
+import {
+  downloadList,
+  listDataItem,
+  listErrorItem,
+  listMatcher,
+  MIN_LIST_DOMAINS,
+  parseFilterList,
+  urlFilterRegExp,
+} from '@/lib/lists';
 import { disableList, setListAllow, settingsItem, updateSettings } from '@/lib/settings';
 
 beforeEach(() => {
@@ -10,7 +18,15 @@ beforeEach(() => {
 describe('parseFilterList', () => {
   it('keeps plain domain blocks and exceptions, lowercased and deduplicated', () => {
     const r = parseFilterList(
-      ['[Adblock Plus 1.1]', '! comment', '||Tracker.com^', '||tracker.com^', '||ads.net^$third-party', '||px.io^$script,3p', '@@||ok.tracker.com^'].join('\n'),
+      [
+        '[Adblock Plus 1.1]',
+        '! comment',
+        '||Tracker.com^',
+        '||tracker.com^',
+        '||ads.net^$third-party',
+        '||px.io^$script,3p',
+        '@@||ok.tracker.com^',
+      ].join('\n'),
     );
     expect(r.domains).toEqual(['ads.net', 'px.io', 'tracker.com']);
     expect(r.exceptions).toEqual(['ok.tracker.com']);
@@ -18,14 +34,24 @@ describe('parseFilterList', () => {
   });
 
   it('reads mixed resource types that include scripts as domain blocks', () => {
-    const r = parseFilterList(['||a.com^$script,third-party,xmlhttprequest', '||b.com^$~image,third-party', '||c.com^$important'].join('\n'));
+    const r = parseFilterList(
+      ['||a.com^$script,third-party,xmlhttprequest', '||b.com^$~image,third-party', '||c.com^$important'].join('\n'),
+    );
     expect(r.domains).toEqual(['a.com', 'b.com', 'c.com']);
     expect(r.filters).toEqual([]);
   });
 
   it('keeps path entries as DNR url filters', () => {
     const r = parseFilterList(
-      ['||cdn.com/track.js', '||cdn.com^*/pixel$script', '/analytics.js', '&ev=PageView&', '|http://x.o2.pl^', '||google.*/collect?', '/analytics.js'].join('\n'),
+      [
+        '||cdn.com/track.js',
+        '||cdn.com^*/pixel$script',
+        '/analytics.js',
+        '&ev=PageView&',
+        '|http://x.o2.pl^',
+        '||google.*/collect?',
+        '/analytics.js',
+      ].join('\n'),
     );
     expect(r.filters).toEqual([
       { url: '||cdn.com/track.js' },
@@ -63,13 +89,24 @@ describe('parseFilterList', () => {
   });
 
   it('narrows broken positive sites, and drops an entry whose negated site cannot be expressed', () => {
-    const r = parseFilterList(['||a.com/x$domain=ok.com|wayfair.*', '||b.com/x$domain=wayfair.*', '||c.com/x$domain=~wayfair.*'].join('\n'));
+    const r = parseFilterList(
+      ['||a.com/x$domain=ok.com|wayfair.*', '||b.com/x$domain=wayfair.*', '||c.com/x$domain=~wayfair.*'].join('\n'),
+    );
     expect(r.filters).toEqual([{ url: '||a.com/x', sites: ['ok.com'] }]);
     expect(r.skipped).toBe(2);
   });
 
   it('drops path blocks under a blocked domain, unless the list excepts that host', () => {
-    const r = parseFilterList(['||t.com^', '@@||ok.t.com^', '||t.com/x.js', '||sub.t.com^*/y', '||ok.t.com/z.js', '@@||t.com/keep.js$domain=a.com'].join('\n'));
+    const r = parseFilterList(
+      [
+        '||t.com^',
+        '@@||ok.t.com^',
+        '||t.com/x.js',
+        '||sub.t.com^*/y',
+        '||ok.t.com/z.js',
+        '@@||t.com/keep.js$domain=a.com',
+      ].join('\n'),
+    );
     expect(r.filters).toEqual([{ url: '||ok.t.com/z.js' }, { url: '||t.com/keep.js', allow: true, sites: ['a.com'] }]);
     expect(r.skipped).toBe(2);
   });
@@ -161,7 +198,8 @@ describe('listMatcher', () => {
 
 describe('downloadList', () => {
   const big = Array.from({ length: MIN_LIST_DOMAINS }, (_, i) => `||t${i}.com^`).join('\n');
-  const fakeFetch = (status: number, body: string) => (async () => new Response(body, { status })) as unknown as typeof fetch;
+  const fakeFetch = (status: number, body: string) =>
+    (async () => new Response(body, { status })) as unknown as typeof fetch;
 
   it('returns parsed data with a timestamp', async () => {
     const d = await downloadList('easyprivacy', fakeFetch(200, big + '\n@@||ok.com^'));

@@ -3,8 +3,22 @@ import { fileFromUrl, hostFromUrl } from '@/lib/domain';
 import { downloadList, isListId, LIST_IDS, listDataItem, listErrorItem, listMatcher, type ListId } from '@/lib/lists';
 import { buildDnrRules, checkRuleCount, type ListRules } from '@/lib/rules';
 import { badgeCount, DEFAULT_SETTINGS, isAutoReload, settingsItem, updateSettings } from '@/lib/settings';
-import { LIST_REFRESH, listDroppedKey, POPUP_PORT, syncErrorKey, tabStateKey, type ListRefreshMessage, type PopupPortMessage } from '@/lib/tabs';
-import { emptyTabState, normalizeTabState, type InlineBlockedMessage, type ScriptEntry, type TabState } from '@/lib/types';
+import {
+  LIST_REFRESH,
+  listDroppedKey,
+  POPUP_PORT,
+  syncErrorKey,
+  tabStateKey,
+  type ListRefreshMessage,
+  type PopupPortMessage,
+} from '@/lib/tabs';
+import {
+  emptyTabState,
+  normalizeTabState,
+  type InlineBlockedMessage,
+  type ScriptEntry,
+  type TabState,
+} from '@/lib/types';
 
 const MAX_SCRIPTS_PER_TAB = 300;
 const MAX_FRAMES_PER_TAB = 50;

@@ -93,8 +93,8 @@ export default function App() {
         <RuleForm submitLabel="Tambah" onSubmit={(r) => addRules([r])} />
         <p className="muted hint">
           Domain ikut nge-cover subdomain-nya (<span className="mono">example.com</span> →{' '}
-          <span className="mono">cdn.example.com</span>). Nama script dicocokkan ke path URL, <span className="mono">*</span>{' '}
-          jadi wildcard.
+          <span className="mono">cdn.example.com</span>). Nama script dicocokkan ke path URL,{' '}
+          <span className="mono">*</span> jadi wildcard.
         </p>
       </section>
 
@@ -130,7 +130,9 @@ export default function App() {
         </div>
         <RuleTable
           rules={filtered}
-          emptyText={settings.rules.length ? 'Nggak ada rule yang cocok.' : 'Belum ada rule. Tambah di atas atau dari popup.'}
+          emptyText={
+            settings.rules.length ? 'Nggak ada rule yang cocok.' : 'Belum ada rule. Tambah di atas atau dari popup.'
+          }
         />
       </section>
 

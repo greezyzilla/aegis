@@ -59,7 +59,9 @@ export function SiteList({ title, description, sites, onRemove, onAdd, addLabel 
       )}
       {sites.length === 0 ? (
         <p className="empty muted">
-          {onAdd ? 'Belum ada. Tambah di atas, atau nyalakan dari popup di situsnya.' : 'Kosong. Atur dari popup di situs terkait.'}
+          {onAdd
+            ? 'Belum ada. Tambah di atas, atau nyalakan dari popup di situsnya.'
+            : 'Kosong. Atur dari popup di situs terkait.'}
         </p>
       ) : (
         <ul className="chips" role="list">

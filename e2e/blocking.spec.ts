@@ -74,7 +74,12 @@ test.describe('blocking rules in a real browser', () => {
   });
 
   test('global block applies on inactive and active sites, over allow rules', async ({ setSettings, visit, ran }) => {
-    await setSettings({ ...DEFAULTS, activeSites: ['site-a.test'], rules: [rule('other.test')], blocks: [block('other.test')] });
+    await setSettings({
+      ...DEFAULTS,
+      activeSites: ['site-a.test'],
+      rules: [rule('other.test')],
+      blocks: [block('other.test')],
+    });
     expect(await ran(await visit('site-a.test'))).toEqual({ inline: false, loaded: [] });
     expect(await ran(await visit('site-b.test'))).toEqual({
       inline: true,
@@ -91,12 +96,22 @@ test.describe('blocking rules in a real browser', () => {
 
   test('global block covers subdomains, on an inactive site', async ({ setSettings, visit, ran }) => {
     await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('cdn.test')] });
-    expect(await ran(await visit('site-b.test'))).toEqual({ inline: true, loaded: ['other.test/d.js', 'site-b.test/self.js'] });
+    expect(await ran(await visit('site-b.test'))).toEqual({
+      inline: true,
+      loaded: ['other.test/d.js', 'site-b.test/self.js'],
+    });
   });
 
-  test('global block with a script name beats a domain allow rule on an active site', async ({ setSettings, visit, ran }) => {
+  test('global block with a script name beats a domain allow rule on an active site', async ({
+    setSettings,
+    visit,
+    ran,
+  }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')], blocks: [block('cdn.test', 'b.js')] });
-    expect(await ran(await visit('site-a.test'))).toEqual({ inline: false, loaded: ['cdn.test/lib/a.js', 'sub.cdn.test/c.js'] });
+    expect(await ran(await visit('site-a.test'))).toEqual({
+      inline: false,
+      loaded: ['cdn.test/lib/a.js', 'sub.cdn.test/c.js'],
+    });
   });
 
   test('an active subdomain does not activate its parent', async ({ setSettings, visit, ran }) => {
@@ -105,24 +120,45 @@ test.describe('blocking rules in a real browser', () => {
     expect(await ran(await visit('site-a.test'))).toEqual({ inline: true, loaded: ALL_SCRIPTS('site-a.test') });
   });
 
-  test('a restarted background migrates v1 settings and rebuilds the rules', async ({ setSettings, context, sw, visit, ran }) => {
+  test('a restarted background migrates v1 settings and rebuilds the rules', async ({
+    setSettings,
+    context,
+    sw,
+    visit,
+    ran,
+  }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
     const v1 = { enabled: true, rules: [rule('cdn.test')], pausedSites: ['a.test'], inlineSites: ['b.test'] };
-    await sw.evaluate((v) => chrome.storage.local.set({ settings: v }).then(() => chrome.storage.local.remove('settings$')), v1);
+    await sw.evaluate(
+      (v) => chrome.storage.local.set({ settings: v }).then(() => chrome.storage.local.remove('settings$')),
+      v1,
+    );
 
     // Same as after an update: a fresh worker finds v1 data and must migrate before syncing.
     const cdp = await context.newCDPSession(await context.newPage());
     const { targetInfos } = await cdp.send('Target.getTargets');
     const target = targetInfos.find((t) => t.type === 'service_worker' && t.url === sw.url());
     await cdp.send('Target.closeTarget', { targetId: target!.targetId });
-    await expect.poll(async () => (await cdp.send('Target.getTargets')).targetInfos.some((t) => t.type === 'service_worker')).toBe(false);
+    await expect
+      .poll(async () => (await cdp.send('Target.getTargets')).targetInfos.some((t) => t.type === 'service_worker'))
+      .toBe(false);
     await visit('wake.test'); // webRequest events wake the worker
     // Playwright keeps one Worker handle per target; re-read it once the worker answers again.
     const sw2 = () => context.serviceWorkers().at(-1)!;
-    await expect.poll(() => sw2().evaluate(() => 1).catch(() => 0)).toBe(1);
+    await expect
+      .poll(() =>
+        sw2()
+          .evaluate(() => 1)
+          .catch(() => 0),
+      )
+      .toBe(1);
 
     await expect
-      .poll(() => sw2().evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).map((r) => r.action.type).sort()))
+      .poll(() =>
+        sw2().evaluate(async () =>
+          (await chrome.declarativeNetRequest.getDynamicRules()).map((r) => r.action.type).sort(),
+        ),
+      )
       .toEqual(['allow', 'allow', 'allowAllRequests', 'block', 'modifyHeaders']);
     expect(await sw2().evaluate(async () => (await chrome.storage.local.get('settings')).settings)).toEqual({
       rules: [rule('cdn.test')],
@@ -139,11 +175,21 @@ test.describe('blocking rules in a real browser', () => {
 
   test('v1 settings are migrated when the extension loads', async ({ context, extensionId, sw, getSettings }) => {
     const v1 = { enabled: true, rules: [rule('cdn.test')], pausedSites: ['a.test'], inlineSites: ['b.test'] };
-    await sw.evaluate((v) => chrome.storage.local.set({ settings: v }).then(() => chrome.storage.local.remove('settings$')), v1);
+    await sw.evaluate(
+      (v) => chrome.storage.local.set({ settings: v }).then(() => chrome.storage.local.remove('settings$')),
+      v1,
+    );
     // Every extension page runs the migration when it loads the settings item.
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await expect.poll(getSettings).toEqual({ rules: [rule('cdn.test')], blocks: [], activeSites: [], inlineSites: ['b.test'], lists: [], listAllow: [] });
+    await expect.poll(getSettings).toEqual({
+      rules: [rule('cdn.test')],
+      blocks: [],
+      activeSites: [],
+      inlineSites: ['b.test'],
+      lists: [],
+      listAllow: [],
+    });
   });
 
   test('rules survive a service worker restart', async ({ setSettings, visit, ran, context, sw }) => {

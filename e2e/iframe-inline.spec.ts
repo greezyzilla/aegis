@@ -52,7 +52,13 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     await expect(frameRow.locator('.count')).toHaveText('2');
   });
 
-  test('allowing the iframe inline makes the player run, page inline stays blocked', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+  test('allowing the iframe inline makes the player run, page inline stays blocked', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test', 'player.test')] });
     const page = await visit('stream.test', '/embed');
     expect(await ranIn(playerFrame(page))).toEqual({ inline: false, loaded: ['cdn.test/lib/a.js'] });
@@ -66,7 +72,11 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     expect((await ran(page)).inline).toBe(false);
   });
 
-  test('allowed iframe stays in the list after reload and can be turned off', async ({ setSettings, visit, openPopup }) => {
+  test('allowed iframe stays in the list after reload and can be turned off', async ({
+    setSettings,
+    visit,
+    openPopup,
+  }) => {
     await setSettings({ ...DEFAULTS, inlineSites: ['player.test'] });
     const page = await visit('stream.test', '/embed');
     expect((await ranIn(playerFrame(page))).inline).toBe(true);
@@ -80,7 +90,11 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     await expect(popup.locator('.inline-row', { hasText: 'player.test' }).locator('.count')).toHaveText('2');
   });
 
-  test('an iframe on an active site stays blocked even though its own host is not active', async ({ setSettings, visit, ran }) => {
+  test('an iframe on an active site stays blocked even though its own host is not active', async ({
+    setSettings,
+    visit,
+    ran,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: ['stream.test'] });
     const page = await visit('stream.test', '/embed');
     await expect.poll(() => page.frames().some((f) => f.url().includes('player.test'))).toBe(true);
@@ -110,7 +124,14 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     await expect(popup.locator('.inline-row')).toHaveCount(0);
   });
 
-  test('an iframe host added by hand in Options gets its inline scripts back', async ({ setSettings, context, extensionId, getSettings, visit, ran }) => {
+  test('an iframe host added by hand in Options gets its inline scripts back', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+    visit,
+    ran,
+  }) => {
     await setSettings(DEFAULTS);
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);

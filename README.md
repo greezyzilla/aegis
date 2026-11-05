@@ -58,12 +58,12 @@ Not published to the stores. Brave/Chrome loads `dist/chrome-mv3` unpacked. Fire
 
 All blocking is done with `declarativeNetRequest` dynamic rules, rebuilt from settings on every change (`lib/rules.ts`):
 
-| Priority | Rule |
-|---|---|
-| 4 | Global block: script domain (+ optional `urlFilter` on the script name), on every site. Each enabled public list is one rule holding all its domains in `requestDomains` (the 30k dynamic-rule cap counts rules, not domains) |
-| 3 | `allowAllRequests` on every top-level page except active sites (`excludedRequestDomains`), so inactive tabs, iframes included, load everything except priority 4 |
-| 2 | Allow rule: script domain (+ optional `urlFilter` on the script name, + optional `initiatorDomains` for a site scope), or an inline-allowed site |
-| 1 | Block every `script` request, and append a CSP header that drops inline scripts |
+| Priority | Rule                                                                                                                                                                                                                          |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4        | Global block: script domain (+ optional `urlFilter` on the script name), on every site. Each enabled public list is one rule holding all its domains in `requestDomains` (the 30k dynamic-rule cap counts rules, not domains) |
+| 3        | `allowAllRequests` on every top-level page except active sites (`excludedRequestDomains`), so inactive tabs, iframes included, load everything except priority 4                                                              |
+| 2        | Allow rule: script domain (+ optional `urlFilter` on the script name, + optional `initiatorDomains` for a site scope), or an inline-allowed site                                                                              |
+| 1        | Block every `script` request, and append a CSP header that drops inline scripts                                                                                                                                               |
 
 Only the top-level page decides whether a tab is active, so an iframe inside an active site is blocked too. Domains match their subdomains. A per-site rule matches the document that loads the script, so scripts inside a third-party iframe follow the iframe's domain.
 

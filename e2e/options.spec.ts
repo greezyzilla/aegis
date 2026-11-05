@@ -11,7 +11,12 @@ async function openOptions(page: Page, extensionId: string) {
 }
 
 test.describe('options page', () => {
-  test('auto-reload is on by default and can be turned off', async ({ setSettings, context, extensionId, getSettings }) => {
+  test('auto-reload is on by default and can be turned off', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+  }) => {
     await setSettings(DEFAULTS);
     const page = await context.newPage();
     await openOptions(page, extensionId);
@@ -23,7 +28,14 @@ test.describe('options page', () => {
     await expect.poll(async () => (await getSettings()).autoReload).toBe(false);
   });
 
-  test('adding a rule installs it and lets the script run', async ({ setSettings, context, extensionId, visit, ran, sw }) => {
+  test('adding a rule installs it and lets the script run', async ({
+    setSettings,
+    context,
+    extensionId,
+    visit,
+    ran,
+    sw,
+  }) => {
     await setSettings(DEFAULTS);
     const page = await context.newPage();
     const form = await openOptions(page, extensionId);
@@ -33,7 +45,9 @@ test.describe('options page', () => {
     await form.getByRole('button', { name: 'Tambah' }).click();
 
     await expect(page.getByRole('row', { name: /cdn\.test a\.js Global/ })).toBeVisible();
-    await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length)).toBe(4);
+    await expect
+      .poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length))
+      .toBe(4);
     expect((await ran(await visit('site-a.test'))).loaded).toEqual(['cdn.test/lib/a.js']);
   });
 
@@ -52,12 +66,21 @@ test.describe('options page', () => {
     expect((await getSettings()).rules).toEqual([]);
   });
 
-  test('editing a rule to a site scope changes where it applies', async ({ setSettings, context, extensionId, visit, ran }) => {
+  test('editing a rule to a site scope changes where it applies', async ({
+    setSettings,
+    context,
+    extensionId,
+    visit,
+    ran,
+  }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('other.test')] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
-    await page.getByRole('row', { name: /other\.test/ }).getByRole('button', { name: 'Edit' }).click();
+    await page
+      .getByRole('row', { name: /other\.test/ })
+      .getByRole('button', { name: 'Edit' })
+      .click();
     const editRow = page.locator('tbody tr').first();
     await editRow.getByLabel('Berlaku di').selectOption('site');
     await editRow.getByLabel('Situs', { exact: true }).fill('site-a.test');
@@ -79,7 +102,10 @@ test.describe('options page', () => {
   });
 
   test('search and scope filter narrow the table', async ({ setSettings, context, extensionId }) => {
-    await setSettings({ ...DEFAULTS, rules: [rule('cdn.test'), rule('other.test', 'site-a.test'), rule('x.test', 'site-b.test')] });
+    await setSettings({
+      ...DEFAULTS,
+      rules: [rule('cdn.test'), rule('other.test', 'site-a.test'), rule('x.test', 'site-b.test')],
+    });
     const page = await context.newPage();
     await openOptions(page, extensionId);
     const rows = page.locator('tbody tr');
@@ -94,7 +120,14 @@ test.describe('options page', () => {
     await expect(rows).toContainText('x.test');
   });
 
-  test('global blocks can be added and removed', async ({ setSettings, context, extensionId, visit, ran, getSettings }) => {
+  test('global blocks can be added and removed', async ({
+    setSettings,
+    context,
+    extensionId,
+    visit,
+    ran,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
@@ -112,7 +145,12 @@ test.describe('options page', () => {
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).toContain('other.test/d.js');
   });
 
-  test('global block form validates input and keeps the script name', async ({ setSettings, context, extensionId, getSettings }) => {
+  test('global block form validates input and keeps the script name', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
@@ -138,14 +176,25 @@ test.describe('options page', () => {
     await expect(card.locator('.block-rule')).toHaveCount(1);
   });
 
-  test('a v1 backup imports through the page, ignoring paused sites', async ({ setSettings, context, extensionId, getSettings }, testInfo) => {
+  test('a v1 backup imports through the page, ignoring paused sites', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+  }, testInfo) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
     const file = testInfo.outputPath('v1.json');
     await fs.writeFile(
       file,
-      JSON.stringify({ app: 'aegis', version: 1, rules: [{ domain: 'cdn.test', scope: 'global' }], pausedSites: ['a.test'], inlineSites: ['b.test'] }),
+      JSON.stringify({
+        app: 'aegis',
+        version: 1,
+        rules: [{ domain: 'cdn.test', scope: 'global' }],
+        pausedSites: ['a.test'],
+        inlineSites: ['b.test'],
+      }),
     );
 
     await page.locator('input[type=file]').setInputFiles(file);
@@ -156,7 +205,14 @@ test.describe('options page', () => {
     expect(s.inlineSites).toEqual(['b.test']);
   });
 
-  test('active sites can be added by hand, normalized like the popup', async ({ setSettings, context, extensionId, getSettings, visit, ran }) => {
+  test('active sites can be added by hand, normalized like the popup', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+    visit,
+    ran,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
@@ -177,12 +233,24 @@ test.describe('options page', () => {
     await expect.poll(async () => (await ran(await visit('www.site-a.test'))).loaded).toEqual([]);
   });
 
-  test('cards follow the model: active sites and global blocks first, settings and backup last', async ({ setSettings, context, extensionId }) => {
+  test('cards follow the model: active sites and global blocks first, settings and backup last', async ({
+    setSettings,
+    context,
+    extensionId,
+  }) => {
     await setSettings(DEFAULTS);
     const page = await context.newPage();
     await openOptions(page, extensionId);
     const titles = (await page.locator('.card > h2').allTextContents()).map((t) => t.replace(/\s*\(\d+\)$/, ''));
-    expect(titles).toEqual(['Situs aktif', 'Blok global', 'Daftar publik', 'Tambah rule izin', 'Inline script diizinkan', 'Pengaturan', 'Backup']);
+    expect(titles).toEqual([
+      'Situs aktif',
+      'Blok global',
+      'Daftar publik',
+      'Tambah rule izin',
+      'Inline script diizinkan',
+      'Pengaturan',
+      'Backup',
+    ]);
   });
 
   test('active and inline sites can be removed', async ({ setSettings, context, extensionId, getSettings }) => {
@@ -192,34 +260,56 @@ test.describe('options page', () => {
 
     await page.getByRole('button', { name: 'Hapus news.test' }).click();
     await page.getByRole('button', { name: 'Hapus github.test' }).click();
-    await expect.poll(async () => {
-      const s = await getSettings();
-      return [s.activeSites, s.inlineSites];
-    }).toEqual([[], []]);
+    await expect
+      .poll(async () => {
+        const s = await getSettings();
+        return [s.activeSites, s.inlineSites];
+      })
+      .toEqual([[], []]);
   });
 
-  test('export then import restores rules into a clean profile', async ({ setSettings, context, extensionId, getSettings }, testInfo) => {
-    await setSettings({
-      ...DEFAULTS,
-      rules: [rule('cdn.test', 'global', 'a.js'), rule('other.test', 'site-a.test')],
-      blocks: [block('tracker.test')],
-      activeSites: ['news.test'],
-      lists: ['easyprivacy'],
-      listAllow: ['cdn.test'],
-    }, { easyprivacy: { domains: ['tracker.test'], exceptions: [], updatedAt: 0, skipped: 0 } });
+  test('export then import restores rules into a clean profile', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+  }, testInfo) => {
+    await setSettings(
+      {
+        ...DEFAULTS,
+        rules: [rule('cdn.test', 'global', 'a.js'), rule('other.test', 'site-a.test')],
+        blocks: [block('tracker.test')],
+        activeSites: ['news.test'],
+        lists: ['easyprivacy'],
+        listAllow: ['cdn.test'],
+      },
+      { easyprivacy: { domains: ['tracker.test'], exceptions: [], updatedAt: 0, skipped: 0 } },
+    );
     // The list is downloaded again on import, not carried in the file.
-    await context.route(LIST_URL, (r) => r.fulfill({ body: Array.from({ length: 1000 }, (_, i) => `||t${i}.example^`).join('\n') }));
+    await context.route(LIST_URL, (r) =>
+      r.fulfill({ body: Array.from({ length: 1000 }, (_, i) => `||t${i}.example^`).join('\n') }),
+    );
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
-    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export JSON' }).click()]);
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export JSON' }).click(),
+    ]);
     const file = testInfo.outputPath('backup.json');
     await download.saveAs(file);
-    expect(JSON.parse(await fs.readFile(file, 'utf8'))).toMatchObject({ app: 'aegis', version: 3, lists: ['easyprivacy'], listAllow: ['cdn.test'] });
+    expect(JSON.parse(await fs.readFile(file, 'utf8'))).toMatchObject({
+      app: 'aegis',
+      version: 3,
+      lists: ['easyprivacy'],
+      listAllow: ['cdn.test'],
+    });
 
     await setSettings({ ...DEFAULTS, activeSites: [] });
     await page.locator('input[type=file]').setInputFiles(file);
-    await expect(page.getByText('3 rule dibaca dan digabung (duplikat dilewati). EasyPrivacy diaktifkan.')).toBeVisible();
+    await expect(
+      page.getByText('3 rule dibaca dan digabung (duplikat dilewati). EasyPrivacy diaktifkan.'),
+    ).toBeVisible();
     const s = await getSettings();
     expect(s.rules.map((r) => [r.domain, r.scope, r.script])).toEqual([
       ['cdn.test', 'global', 'a.js'],
@@ -231,16 +321,35 @@ test.describe('options page', () => {
     await expect(page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  test('importing a backup whose list cannot be downloaded says so and leaves it off', async ({ setSettings, context, extensionId, getSettings }, testInfo) => {
+  test('importing a backup whose list cannot be downloaded says so and leaves it off', async ({
+    setSettings,
+    context,
+    extensionId,
+    getSettings,
+  }, testInfo) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     await context.route(LIST_URL, (r) => r.fulfill({ status: 503, body: 'down' }));
     const page = await context.newPage();
     await openOptions(page, extensionId);
     const file = testInfo.outputPath('v3.json');
-    await fs.writeFile(file, JSON.stringify({ app: 'aegis', version: 3, rules: [], blocks: [], activeSites: [], inlineSites: [], lists: ['easyprivacy'], listAllow: [] }));
+    await fs.writeFile(
+      file,
+      JSON.stringify({
+        app: 'aegis',
+        version: 3,
+        rules: [],
+        blocks: [],
+        activeSites: [],
+        inlineSites: [],
+        lists: ['easyprivacy'],
+        listAllow: [],
+      }),
+    );
 
     await page.locator('input[type=file]').setInputFiles(file);
-    await expect(page.getByRole('status').filter({ hasText: 'EasyPrivacy belum aktif: Gagal unduh EasyPrivacy: HTTP 503' })).toBeVisible();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'EasyPrivacy belum aktif: Gagal unduh EasyPrivacy: HTTP 503' }),
+    ).toBeVisible();
     expect((await getSettings()).lists).toEqual([]);
   });
 });
