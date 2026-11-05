@@ -95,6 +95,8 @@ export const block = (domain: string, script?: string): BlockRule => ({
 });
 
 interface Fixtures {
+  /** UI language of the test browser: the suite reads the Indonesian UI; english.spec.ts switches to English. */
+  uiLang: 'id' | 'en';
   context: BrowserContext;
   sw: Worker;
   extensionId: string;
@@ -122,14 +124,15 @@ export const test = base.extend<Fixtures, { port: number }>({
     { scope: 'worker' },
   ],
 
-  context: async ({}, use) => {
+  uiLang: ['id', { option: true }],
+
+  context: async ({ uiLang }, use) => {
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
       headless: true,
-      // The suite reads the Indonesian UI; English is covered by the unit tests and screenshots.
-      locale: 'id-ID',
+      locale: uiLang === 'id' ? 'id-ID' : 'en-US',
       args: [
-        '--lang=id',
+        `--lang=${uiLang}`,
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
         '--host-resolver-rules=MAP *.test 127.0.0.1',

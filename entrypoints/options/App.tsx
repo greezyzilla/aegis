@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
-import { t } from '@/lib/i18n';
+import { applyLang, t } from '@/lib/i18n';
 import { LIST_IDS, LISTS } from '@/lib/lists';
-import { addBlocks, addRules, isAutoReload, removeSite, setAutoReload, setSiteFlag } from '@/lib/settings';
+import { addBlocks, addRules, isAutoReload, removeSite, setAutoReload, setLangPref, setSiteFlag } from '@/lib/settings';
 import { useSettings } from '@/lib/useSettings';
 import { Section } from '../popup/Section';
 import { exportSettings, importSettings } from './backup';
@@ -14,6 +14,12 @@ import { SiteList } from './SiteList';
 
 export default function App() {
   const settings = useSettings();
+  // Before any text renders: the page shows nothing until settings are read.
+  if (settings) applyLang(settings.lang);
+  const langPref = settings?.lang;
+  useEffect(() => {
+    document.title = t.optionsTitle;
+  }, [langPref]);
   const [query, setQuery] = useState('');
   const [scopeFilter, setScopeFilter] = useState('all');
   const [status, setStatus] = useState<{ text: string; error?: boolean } | null>(null);
@@ -175,6 +181,28 @@ export default function App() {
                 <span>{t.autoReloadDesc}</span>
               </span>
               <Switch checked={isAutoReload(settings)} onChange={(v) => void setAutoReload(v)} label={t.autoReload} />
+            </li>
+            <li className="row">
+              <span className="row-text">
+                <b>{t.languageTitle}</b>
+                <span>{t.languageDesc}</span>
+              </span>
+              <select
+                className="input input-lang"
+                aria-label={t.languageTitle}
+                value={settings.lang ?? 'auto'}
+                onChange={async (e) => {
+                  const v = e.target.value;
+                  await setLangPref(v === 'id' || v === 'en' ? v : undefined);
+                  // Every piece of text was rendered in the old language: start over.
+                  location.reload();
+                }}
+              >
+                <option value="auto">{t.langAuto}</option>
+                {/* Each language in its own name, so it can be found from the other one. */}
+                <option value="id">Bahasa Indonesia</option>
+                <option value="en">English</option>
+              </select>
             </li>
           </ul>
         </Section>

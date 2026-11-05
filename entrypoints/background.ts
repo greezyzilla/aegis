@@ -1,6 +1,7 @@
 import { browser, storage, type Browser } from '#imports';
 import { fileFromUrl, hostFromUrl } from '@/lib/domain';
 import { downloadList, isListId, LIST_IDS, listDataItem, listErrorItem, listMatcher, type ListId } from '@/lib/lists';
+import { applyLang } from '@/lib/i18n';
 import { buildDnrRules, checkRuleCount, type ListRules } from '@/lib/rules';
 import { badgeCount, DEFAULT_SETTINGS, isAutoReload, settingsItem, updateSettings } from '@/lib/settings';
 import {
@@ -39,6 +40,8 @@ export default defineBackground(() => {
     syncChain = syncChain.then(async () => {
       try {
         const settings = await settingsItem.getValue();
+        // Errors written for the popup and options page follow the language picked there.
+        applyLang(settings.lang);
         const max = browser.declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_RULES;
         const { rules, dropped } = buildDnrRules(settings, await readLists(settings.lists), max);
         checkRuleCount(rules, max);
@@ -82,6 +85,7 @@ export default defineBackground(() => {
 
   const refreshList = async (id: ListId): Promise<void> => {
     try {
+      applyLang((await settingsItem.getValue()).lang);
       await listDataItem(id).setValue(await downloadList(id));
       await listErrorItem(id).setValue(null);
     } catch (err) {

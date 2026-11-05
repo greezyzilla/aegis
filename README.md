@@ -42,7 +42,7 @@ The options page holds everything else: allow rules, global blocks, active and i
 
 ## Limitations
 
-- The interface is in English, or in Indonesian when the browser's language is Indonesian. There is no setting to switch it.
+- The interface is in English and Indonesian. It follows the browser's language unless you pick one under Settings in the options page.
 - It blocks scripts and nothing else: images, iframes and other requests load as usual.
 - Firefox allows 5,000 dynamic blocking rules, Chrome 30,000. EasyPrivacy needs about 8,500, so on Firefox the least script-like path entries are left out. The options page shows how many.
 

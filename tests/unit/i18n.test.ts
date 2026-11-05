@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as i18n from '@/lib/i18n';
 import { langOf, messagesFor } from '@/lib/i18n';
 
 describe('i18n', () => {
@@ -31,5 +32,15 @@ describe('i18n', () => {
     expect(en.listTooSmall('EasyPrivacy', 1)).toBe('EasyPrivacy has only 1 domain, the file is probably broken');
     expect(en.pathsDropped(1200)).toMatch(/^1,200 paths left out/);
     expect(id.pathsDropped(1200)).toMatch(/^1\.200 path tidak dipakai/);
+  });
+
+  it('applyLang switches the live dictionary, and back to the browser language', () => {
+    const browserLang = i18n.lang;
+    const other = browserLang === 'id' ? 'en' : 'id';
+    expect(i18n.applyLang(other)).toBe(true);
+    expect([i18n.lang, i18n.t.remove]).toEqual([other, messagesFor(other).remove]);
+    expect(i18n.applyLang(other)).toBe(false);
+    expect(i18n.applyLang(undefined)).toBe(true);
+    expect([i18n.lang, i18n.t.remove]).toEqual([browserLang, messagesFor(browserLang).remove]);
   });
 });

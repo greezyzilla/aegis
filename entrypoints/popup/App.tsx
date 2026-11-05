@@ -25,10 +25,12 @@ import { GlobalBlocks, type ListHit } from './ListHits';
 import { LoadedList, type LoadedGroup } from './LoadedList';
 import { Section } from './Section';
 import { useActiveTab } from './useActiveTab';
-import { t } from '@/lib/i18n';
+import { applyLang, t } from '@/lib/i18n';
 
 export default function App() {
   const settings = useSettings();
+  // Before any text renders: nothing translated shows until settings are read.
+  if (settings) applyLang(settings.lang);
   const { tab, state, syncError } = useActiveTab();
   const [changed, setChanged] = useState(false);
   // Switched on in this popup: the page on screen loaded before blocking applied.
