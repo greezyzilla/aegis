@@ -6,3 +6,4 @@ test-results/
 playwright-report/
 backlog/
 package-lock.json
+CHANGELOG.md
