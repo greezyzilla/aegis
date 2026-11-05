@@ -1,0 +1,53 @@
+# release-please keeps one Release PR up to date (version + CHANGELOG.md) from the Conventional
+# Commits on main. Merging that PR tags vX.Y.Z, creates the GitHub Release, and attaches the builds.
+name: release
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  assets:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.release-please.outputs.tag }}
+      # Only a yes/no here: the AMO keys themselves reach the signing step alone, not npm ci.
+      AMO_CONFIGURED: ${{ secrets.WEB_EXT_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run zip && npm run zip:firefox
+      - run: gh release upload "$TAG" dist/aegis-*-chrome.zip dist/aegis-*-firefox.zip
+      - name: Sign the Firefox build on AMO (unlisted) and attach the .xpi
+        if: env.AMO_CONFIGURED == 'true'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: npm run sign:firefox && gh release upload "$TAG" dist/signed/*.xpi
