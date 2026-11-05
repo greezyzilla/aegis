@@ -1,18 +1,32 @@
-# Aegis
-
-Aegis blocks scripts on the sites you choose and lets through only the ones you allow.
+<div align="center">
+  <img src="design/logo/aegis-icon-1024.png" width="96" height="96" alt="">
+  <h1>Aegis</h1>
+  <p>Blocks scripts on the sites you choose and lets through only the ones you allow.</p>
+  <p>
+    <a href="https://github.com/greezyzilla/aegis/releases/latest"><img src="https://img.shields.io/github/v/release/greezyzilla/aegis" alt="Latest release"></a>
+    <a href="https://github.com/greezyzilla/aegis/actions/workflows/check.yml"><img src="https://github.com/greezyzilla/aegis/actions/workflows/check.yml/badge.svg" alt="Check status"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue" alt="License: PolyForm Noncommercial 1.0.0"></a>
+  </p>
+  <p>
+    <a href="#install">Install</a> · <a href="docs/how-it-works.md">How it works</a> · <a href="CONTRIBUTING.md">Contributing</a>
+  </p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/popup-dark.png">
+    <img src="docs/images/popup-light.png" width="360" alt="The Aegis popup on a news site: eight scripts blocked, the site's own scripts listed first, one script allowed by a rule">
+  </picture>
+</div>
 
 Some sites load ads from a different vendor every week, so blocking them by domain never keeps up. On those sites Aegis blocks every script, and you allow the few the page actually needs from the popup. Everywhere else it stays out of the way, apart from trackers you block globally or pull in from EasyPrivacy.
 
-Runs in Brave/Chrome and Firefox 140+. It is not on the extension stores; see [Install](#install).
+Runs in Brave/Chrome and Firefox 140+. It is not on the extension stores.
 
 ## Install
 
-Builds are attached to each [release](https://github.com/greezyzilla/aegis/releases). If there is no release yet, build it from source (see [Development](#development)).
+Download the files from the [latest release](https://github.com/greezyzilla/aegis/releases/latest).
 
 **Brave / Chrome.** Unzip `aegis-X.Y.Z-chrome.zip`, open `brave://extensions` (or `chrome://extensions`), turn on Developer mode, click **Load unpacked** and pick the unzipped folder. In Brave, leave Shields' own script blocking off so the two don't overlap.
 
-**Firefox.** Download the signed `.xpi`, then in `about:addons` open the gear menu and choose **Install Add-on From File**. It is signed by Mozilla as an unlisted add-on, so it stays installed after a restart.
+**Firefox.** Download `aegis-X.Y.Z-firefox.xpi`, then in `about:addons` open the gear menu and choose **Install Add-on From File**. It is signed by Mozilla as an unlisted add-on, so it stays installed after a restart.
 
 Neither build updates itself. To upgrade, install the newer release the same way.
 
@@ -20,9 +34,9 @@ Neither build updates itself. To upgrade, install the newer release the same way
 
 Nothing is blocked until you activate a site, add a global block or turn on a list.
 
-Open the popup on a site and switch on **Aktif di situs ini**. From then on every script on that site is blocked, inline ones included, and the popup lists what was blocked, grouped by domain. Allow a domain or a single script for this site only (**Situs ini**) or for every active site (**Global**). Inline scripts are listed per frame, so an embedded player can be allowed without allowing the page around it. With auto-reload on, the default, the tab reloads once when you close the popup.
+Open the popup on a site and turn on the switch at the top. The header turns blue, and from then on every script on that site is blocked, inline ones included. After a reload the popup lists what was blocked, grouped by domain, with the site's own domains first. **Izinkan** allows a domain or a single script on this site; the arrow next to it holds **Izinkan di semua situs** for every active site. Inline scripts are listed per frame, so an embedded player can be allowed without allowing the page around it. With auto-reload on, the default, the tab reloads once when you close the popup.
 
-On any site the popup also lists the scripts that ran. **Blok global** blocks one on every site, active or not, and a global block wins over allow rules.
+On a site that is not active, the popup lists the scripts that ran. **Blok** blocks one on every site, active or not, and a global block wins over allow rules.
 
 The options page holds everything else: allow rules, global blocks, active and inline-allowed sites, EasyPrivacy (downloaded from easylist.to when you turn it on, refreshed weekly) and a JSON export/import of your settings. If EasyPrivacy breaks a site, allow the host from the popup.
 
