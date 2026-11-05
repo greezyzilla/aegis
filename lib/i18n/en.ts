@@ -1,17 +1,16 @@
 import type { Format } from './format';
-import type { Messages } from './id';
 
-/** English UI text, for every browser language other than Indonesian. */
-export const en = (f: Format): Messages => ({
+/** English UI text, the default. `id.ts` must have the same keys (the type checks it). */
+export const en = (f: Format) => ({
   // Popup
-  syncFailed: (error) => `Couldn't apply the rules: ${error}`,
+  syncFailed: (error: string) => `Couldn't apply the rules: ${error}`,
   notControllable: "This page can't be managed (not http/https).",
   siteSettings: 'Settings for this site',
-  activateOn: (site) => `Turn on blocking on ${site}`,
-  flagBlocked: (n) => `${f.num(n)} blocked`,
-  flagBlockedGlobal: (n) => `${f.num(n)} blocked globally`,
-  flagAllowed: (n) => `${f.num(n)} allowed`,
-  flagRan: (n) => `${f.num(n)} ran`,
+  activateOn: (site: string) => `Turn on blocking on ${site}`,
+  flagBlocked: (n: number) => `${f.num(n)} blocked`,
+  flagBlockedGlobal: (n: number) => `${f.num(n)} blocked globally`,
+  flagAllowed: (n: number) => `${f.num(n)} allowed`,
+  flagRan: (n: number) => `${f.num(n)} ran`,
   sectionBlocked: 'Blocked on this page',
   sectionInline: 'Inline scripts',
   sectionAllowed: 'Allowed',
@@ -24,43 +23,43 @@ export const en = (f: Format): Messages => ({
   manageRules: 'Manage all rules →',
   noActiveRules: 'No rules apply here yet.',
   everySite: 'Every site',
-  onlyOn: (site) => `Only on ${site}`,
+  onlyOn: (site: string) => `Only on ${site}`,
   everySiteLower: 'every site',
-  onlyOnLower: (site) => `only on ${site}`,
+  onlyOnLower: (site: string) => `only on ${site}`,
   remove: 'Remove',
-  removeRuleLabel: (rule) => `Remove rule ${rule}`,
-  removeBlockLabel: (block) => `Remove block ${block}`,
-  removeLabel: (item) => `Remove ${item}`,
+  removeRuleLabel: (rule: string) => `Remove rule ${rule}`,
+  removeBlockLabel: (block: string) => `Remove block ${block}`,
+  removeLabel: (item: string) => `Remove ${item}`,
   loadedBeforeActive: 'This page loaded before blocking was on. Reload to see the blocked scripts.',
   noBlocked: 'No scripts blocked on this page yet.',
   allowedTag: '✓ allowed',
   blockedTag: '✓ blocked',
   thisPage: 'this page',
   iframe: 'iframe',
-  blockInlineOn: (site) => `Block inline scripts on ${site}`,
+  blockInlineOn: (site: string) => `Block inline scripts on ${site}`,
   publicList: 'public list',
   noGlobalHits: 'No global blocks hit this page yet.',
   appliesAfterReload: 'applies after a reload',
   allow: 'Allow',
-  allowFromList: (host, list) => `Allow ${host} from ${list}`,
-  allowOnSiteLabel: (item) => `Allow ${item} on this site`,
-  allowEverywhereLabel: (item) => `Allow ${item} on every site`,
+  allowFromList: (host: string, list: string) => `Allow ${host} from ${list}`,
+  allowOnSiteLabel: (item: string) => `Allow ${item} on this site`,
+  allowEverywhereLabel: (item: string) => `Allow ${item} on every site`,
   allowEverywhere: 'Allow on every site',
-  moreFor: (item) => `More options for ${item}`,
+  moreFor: (item: string) => `More options for ${item}`,
   noLoaded: 'No scripts ran on this page yet.',
   block: 'Block',
-  blockEverywhereLabel: (item) => `Block ${item} on every site`,
+  blockEverywhereLabel: (item: string) => `Block ${item} on every site`,
   global: 'Global',
 
   // Options
   optionsHeading: 'All rules',
-  summarySites: (n) => `${f.num(n)} active ${f.plural(n, 'site', 'sites')}`,
-  summaryRules: (n) => `${f.num(n)} allow ${f.plural(n, 'rule', 'rules')}`,
-  summaryBlocks: (n) => `${f.num(n)} global ${f.plural(n, 'block', 'blocks')}`,
-  summaryList: (list, on) => `${list} ${on ? 'on' : 'off'}`,
-  ruleCount: (n) => `${f.num(n)} ${f.plural(n, 'rule', 'rules')}`,
+  summarySites: (n: number) => `${f.num(n)} active ${f.plural(n, 'site', 'sites')}`,
+  summaryRules: (n: number) => `${f.num(n)} allow ${f.plural(n, 'rule', 'rules')}`,
+  summaryBlocks: (n: number) => `${f.num(n)} global ${f.plural(n, 'block', 'blocks')}`,
+  summaryList: (list: string, on: boolean) => `${list} ${on ? 'on' : 'off'}`,
+  ruleCount: (n: number) => `${f.num(n)} ${f.plural(n, 'rule', 'rules')}`,
   inlineTag: 'inline',
-  editRuleLabel: (rule) => `Edit rule ${rule}`,
+  editRuleLabel: (rule: string) => `Edit rule ${rule}`,
   activeSitesAside: 'Every script is blocked, except the allowed ones',
   rulesAside: 'A domain covers its subdomains · * is a wildcard',
   globalBlocksAside: 'Blocked on every site, wins over allow rules',
@@ -73,10 +72,10 @@ export const en = (f: Format): Messages => ({
   optionsTitle: 'Aegis — Rules',
   intro:
     'On active sites every script is blocked, and allow rules decide which ones get through. Global blocks apply on every site.',
-  importRead: (n) => `${f.num(n)} ${f.plural(n, 'rule', 'rules')} read and merged (duplicates skipped).`,
-  listEnabled: (list) => `${list} turned on.`,
-  listNotEnabled: (list, error) => `${list} is not on yet: ${error}`,
-  importFailed: (error) => `Import failed: ${error}`,
+  importRead: (n: number) => `${f.num(n)} ${f.plural(n, 'rule', 'rules')} read and merged (duplicates skipped).`,
+  listEnabled: (list: string) => `${list} turned on.`,
+  listNotEnabled: (list: string, error: string) => `${list} is not on yet: ${error}`,
+  importFailed: (error: string) => `Import failed: ${error}`,
   activeSitesTitle: 'Active sites',
   addActiveSite: 'Add an active site',
   globalBlocksTitle: 'Global blocks',
@@ -93,7 +92,7 @@ export const en = (f: Format): Messages => ({
   settingsTitle: 'Settings',
   autoReload: 'Reload automatically when the popup closes',
   languageTitle: 'Language',
-  languageDesc: 'By default it follows the browser.',
+  languageDesc: 'English unless you pick another one.',
   langAuto: 'Follow the browser',
   autoReloadDesc: 'If something changed in the popup, the tab reloads once.',
   backupTitle: 'Backup',
@@ -105,14 +104,14 @@ export const en = (f: Format): Messages => ({
   publicListsTitle: 'Public lists',
   allowedFromList: 'Allowed from lists',
   noListAllow: 'None yet. Allow a host from the popup if a list breaks a site.',
-  reblockFromList: (host) => `Block ${host} from the list again`,
-  license: (license) => `license ${license}`,
-  enableList: (list) => `Turn on ${list}`,
-  downloading: (list) => `Downloading ${list}…`,
-  listStats: (domains, paths, exceptions, updated) =>
+  reblockFromList: (host: string) => `Block ${host} from the list again`,
+  license: (license: string) => `license ${license}`,
+  enableList: (list: string) => `Turn on ${list}`,
+  downloading: (list: string) => `Downloading ${list}…`,
+  listStats: (domains: number, paths: number, exceptions: number, updated: number) =>
     `${f.num(domains)} ${f.plural(domains, 'domain', 'domains')} · ${f.num(paths)} ${f.plural(paths, 'path', 'paths')} · ${f.num(exceptions)} ${f.plural(exceptions, 'exception', 'exceptions')} · updated ${f.date(updated)}`,
   refreshNow: 'Refresh now',
-  pathsDropped: (n) =>
+  pathsDropped: (n: number) =>
     `${f.num(n)} ${f.plural(n, 'path', 'paths')} left out: this browser limits the number of rules. The most script-like ones are kept.`,
   invalidDomain: 'Invalid domain, e.g. cdn.jsdelivr.net',
   invalidScript: 'ASCII characters only, no spaces',
@@ -126,8 +125,11 @@ export const en = (f: Format): Messages => ({
   notBackup: 'Not an Aegis backup file',
 
   // Errors raised by the background
-  listDownloadFailed: (list, status) => `Couldn't download ${list}: HTTP ${status}`,
-  listTooSmall: (list, n) =>
+  listDownloadFailed: (list: string, status: number) => `Couldn't download ${list}: HTTP ${status}`,
+  listTooSmall: (list: string, n: number) =>
     `${list} has only ${f.num(n)} ${f.plural(n, 'domain', 'domains')}, the file is probably broken`,
-  tooManyRules: (n, max) => `Too many rules: ${n} of at most ${max}. Remove some allow rules or global blocks.`,
+  tooManyRules: (n: number, max: number) =>
+    `Too many rules: ${n} of at most ${max}. Remove some allow rules or global blocks.`,
 });
+
+export type Messages = ReturnType<typeof en>;

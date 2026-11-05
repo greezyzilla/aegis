@@ -1,7 +1,8 @@
+import type { Messages } from './en';
 import type { Format } from './format';
 
-/** Indonesian UI text. `en.ts` must have the same keys (the type checks it). */
-export const id = (f: Format) => ({
+/** Indonesian UI text, picked in Settings or by following an Indonesian browser. */
+export const id = (f: Format): Messages => ({
   // Popup
   syncFailed: (error: string) => `Gagal menerapkan rule: ${error}`,
   notControllable: 'Halaman ini nggak bisa diatur (bukan http/https).',
@@ -92,7 +93,7 @@ export const id = (f: Format) => ({
   settingsTitle: 'Pengaturan',
   autoReload: 'Reload otomatis saat popup ditutup',
   languageTitle: 'Bahasa',
-  languageDesc: 'Default-nya ikut bahasa browser.',
+  languageDesc: 'English kalau belum dipilih.',
   langAuto: 'Ikuti browser',
   autoReloadDesc: 'Kalau ada perubahan di popup, tab-nya di-reload sekali.',
   backupTitle: 'Backup',
@@ -130,5 +131,3 @@ export const id = (f: Format) => ({
   tooManyRules: (n: number, max: number) =>
     `Terlalu banyak rule: ${n} dari maksimal ${max}. Hapus sebagian rule atau blok global.`,
 });
-
-export type Messages = ReturnType<typeof id>;

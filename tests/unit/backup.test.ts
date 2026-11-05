@@ -139,5 +139,8 @@ describe('importSettings', () => {
     expect((await settingsItem.getValue()).lang).toBe('en');
     await importSettings(backup('id'));
     expect((await settingsItem.getValue()).lang).toBe('en');
+    await updateSettings(({ lang: _, ...s }) => s);
+    await importSettings(backup('auto'));
+    expect((await settingsItem.getValue()).lang).toBe('auto');
   });
 });

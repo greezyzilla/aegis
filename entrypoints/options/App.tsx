@@ -190,18 +190,19 @@ export default function App() {
               <select
                 className="input input-lang"
                 aria-label={t.languageTitle}
-                value={settings.lang ?? 'auto'}
+                value={settings.lang ?? 'en'}
                 onChange={async (e) => {
                   const v = e.target.value;
-                  await setLangPref(v === 'id' || v === 'en' ? v : undefined);
+                  // English is the default: picking it stores nothing.
+                  await setLangPref(v === 'id' || v === 'auto' ? v : undefined);
                   // Every piece of text was rendered in the old language: start over.
                   location.reload();
                 }}
               >
-                <option value="auto">{t.langAuto}</option>
                 {/* Each language in its own name, so it can be found from the other one. */}
-                <option value="id">Bahasa Indonesia</option>
                 <option value="en">English</option>
+                <option value="id">Bahasa Indonesia</option>
+                <option value="auto">{t.langAuto}</option>
               </select>
             </li>
           </ul>

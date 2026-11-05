@@ -4,9 +4,9 @@ import { block, DEFAULTS, expect, rule, test } from './fixtures';
 
 const LIST_URL = 'https://easylist.to/easylist/easyprivacy.txt';
 
-const rulesSection = (page: Page) => page.getByRole('region', { name: /^Rule izin/ });
+const rulesSection = (page: Page) => page.getByRole('region', { name: /^Allow rules/ });
 
-/** Opens the page and returns the add form at the top of "Rule izin". */
+/** Opens the page and returns the add form at the top of "Allow rules". */
 async function openOptions(page: Page, extensionId: string) {
   await page.goto(`chrome-extension://${extensionId}/options.html`);
   await rulesSection(page).waitFor();
@@ -24,7 +24,7 @@ test.describe('options page', () => {
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
-    const toggle = page.getByRole('switch', { name: 'Reload otomatis saat popup ditutup' });
+    const toggle = page.getByRole('switch', { name: 'Reload automatically when the popup closes' });
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
@@ -43,12 +43,12 @@ test.describe('options page', () => {
     const page = await context.newPage();
     const form = await openOptions(page, extensionId);
 
-    await form.getByLabel('Domain script').fill('https://CDN.test/whatever');
-    await form.getByLabel('Nama script').fill('a.js');
-    await form.getByRole('button', { name: 'Tambah' }).click();
+    await form.getByLabel('Script domain').fill('https://CDN.test/whatever');
+    await form.getByLabel('Script name').fill('a.js');
+    await form.getByRole('button', { name: 'Add' }).click();
 
     await expect(rulesSection(page).locator('.rule-item', { hasText: 'cdn.test / a.js' })).toBeVisible();
-    await expect(rulesSection(page).locator('.scope-head .host-name')).toHaveText(['Semua situs']);
+    await expect(rulesSection(page).locator('.scope-head .host-name')).toHaveText(['Every site']);
     await expect
       .poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).length))
       .toBe(4);
@@ -60,13 +60,13 @@ test.describe('options page', () => {
     const page = await context.newPage();
     const form = await openOptions(page, extensionId);
 
-    await form.getByLabel('Domain script').fill('not a domain');
-    await form.getByLabel('Berlaku di').selectOption('site');
-    await form.getByRole('button', { name: 'Tambah' }).click();
+    await form.getByLabel('Script domain').fill('not a domain');
+    await form.getByLabel('Applies on').selectOption('site');
+    await form.getByRole('button', { name: 'Add' }).click();
 
-    await expect(page.getByText('Domain nggak valid')).toBeVisible();
-    await expect(page.getByText('Situs nggak valid')).toBeVisible();
-    await expect(form.getByLabel('Domain script')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByText('Invalid domain')).toBeVisible();
+    await expect(page.getByText('Invalid site')).toBeVisible();
+    await expect(form.getByLabel('Script domain')).toHaveAttribute('aria-invalid', 'true');
     expect((await getSettings()).rules).toEqual([]);
   });
 
@@ -83,9 +83,9 @@ test.describe('options page', () => {
 
     await page.getByRole('button', { name: 'Edit rule other.test' }).click();
     const editRow = rulesSection(page).locator('.edit');
-    await editRow.getByLabel('Berlaku di').selectOption('site');
-    await editRow.getByLabel('Situs', { exact: true }).fill('site-a.test');
-    await editRow.getByRole('button', { name: 'Simpan' }).click();
+    await editRow.getByLabel('Applies on').selectOption('site');
+    await editRow.getByLabel('Site', { exact: true }).fill('site-a.test');
+    await editRow.getByRole('button', { name: 'Save' }).click();
     await expect(editRow).toHaveCount(0);
     await expect(rulesSection(page).locator('.scope-head .host-name')).toHaveText(['site-a.test']);
 
@@ -98,8 +98,8 @@ test.describe('options page', () => {
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
-    await page.getByRole('button', { name: 'Hapus rule cdn.test' }).click();
-    await expect(page.getByText('Belum ada rule.')).toBeVisible();
+    await page.getByRole('button', { name: 'Remove rule cdn.test' }).click();
+    await expect(page.getByText('No rules yet.')).toBeVisible();
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).toEqual([]);
   });
 
@@ -113,12 +113,12 @@ test.describe('options page', () => {
     const rows = rulesSection(page).locator('.rule-item');
 
     await expect(rows).toHaveCount(3);
-    await page.getByLabel('Cari rule').fill('other');
+    await page.getByLabel('Search rules').fill('other');
     await expect(rows).toHaveCount(1);
-    await page.getByLabel('Cari rule').fill('');
-    await page.getByLabel('Filter berlaku di').selectOption('global');
+    await page.getByLabel('Search rules').fill('');
+    await page.getByLabel('Filter by where it applies').selectOption('global');
     await expect(rows).toHaveCount(1);
-    await page.getByLabel('Filter berlaku di').selectOption('site-b.test');
+    await page.getByLabel('Filter by where it applies').selectOption('site-b.test');
     await expect(rows).toContainText('x.test');
   });
 
@@ -133,17 +133,17 @@ test.describe('options page', () => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
-    const card = page.getByRole('region', { name: /^Blok global/ });
+    const card = page.getByRole('region', { name: /^Global blocks/ });
 
-    await expect(card.getByLabel('Berlaku di')).toHaveCount(0);
-    await card.getByLabel('Domain script').fill('https://Other.test/x');
-    await card.getByRole('button', { name: 'Blok', exact: true }).click();
-    await expect(card.getByRole('button', { name: 'Hapus blok other.test' })).toBeVisible();
+    await expect(card.getByLabel('Applies on')).toHaveCount(0);
+    await card.getByLabel('Script domain').fill('https://Other.test/x');
+    await card.getByRole('button', { name: 'Block', exact: true }).click();
+    await expect(card.getByRole('button', { name: 'Remove block other.test' })).toBeVisible();
     expect((await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['other.test', undefined]]);
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).not.toContain('other.test/d.js');
 
-    await card.getByRole('button', { name: 'Hapus blok other.test' }).click();
-    await expect(card.getByText('Belum ada blok global.')).toBeVisible();
+    await card.getByRole('button', { name: 'Remove block other.test' }).click();
+    await expect(card.getByText('No global blocks yet.')).toBeVisible();
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).toContain('other.test/d.js');
   });
 
@@ -156,25 +156,25 @@ test.describe('options page', () => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
-    const card = page.getByRole('region', { name: /^Blok global/ });
+    const card = page.getByRole('region', { name: /^Global blocks/ });
 
-    await card.getByLabel('Domain script').fill('not a domain');
-    await card.getByLabel('Nama script').fill('bad name.js');
-    await card.getByRole('button', { name: 'Blok', exact: true }).click();
-    await expect(card.getByText('Domain nggak valid')).toBeVisible();
-    await expect(card.getByText('Hanya karakter ASCII tanpa spasi')).toHaveCount(0); // spaces are stripped, not rejected
+    await card.getByLabel('Script domain').fill('not a domain');
+    await card.getByLabel('Script name').fill('bad name.js');
+    await card.getByRole('button', { name: 'Block', exact: true }).click();
+    await expect(card.getByText('Invalid domain')).toBeVisible();
+    await expect(card.getByText('ASCII characters only, no spaces')).toHaveCount(0); // spaces are stripped, not rejected
     expect((await getSettings()).blocks).toEqual([]);
 
-    await card.getByLabel('Domain script').fill('ads.test');
-    await card.getByLabel('Nama script').fill('pixel.js');
-    await card.getByRole('button', { name: 'Blok', exact: true }).click();
+    await card.getByLabel('Script domain').fill('ads.test');
+    await card.getByLabel('Script name').fill('pixel.js');
+    await card.getByRole('button', { name: 'Block', exact: true }).click();
     await expect(card.locator('.block-rule', { hasText: 'ads.test / pixel.js' })).toBeVisible();
     expect((await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['ads.test', 'pixel.js']]);
 
     // Same block again is ignored.
-    await card.getByLabel('Domain script').fill('ads.test');
-    await card.getByLabel('Nama script').fill('pixel.js');
-    await card.getByRole('button', { name: 'Blok', exact: true }).click();
+    await card.getByLabel('Script domain').fill('ads.test');
+    await card.getByLabel('Script name').fill('pixel.js');
+    await card.getByRole('button', { name: 'Block', exact: true }).click();
     await expect(card.locator('.block-rule')).toHaveCount(1);
   });
 
@@ -200,7 +200,7 @@ test.describe('options page', () => {
     );
 
     await page.locator('input[type=file]').setInputFiles(file);
-    await expect(page.getByText('1 rule dibaca')).toBeVisible();
+    await expect(page.getByText('1 rule read')).toBeVisible();
     const s = await getSettings();
     expect(s.rules.map((r) => r.domain)).toEqual(['cdn.test']);
     expect(s.activeSites).toEqual([]);
@@ -218,18 +218,18 @@ test.describe('options page', () => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const page = await context.newPage();
     await openOptions(page, extensionId);
-    const input = page.getByLabel('Tambah situs aktif');
+    const input = page.getByLabel('Add an active site');
     const card = input.locator('xpath=ancestor::section[1]');
 
     await input.fill('not a site');
-    await card.getByRole('button', { name: 'Tambah' }).click();
-    await expect(card.getByText('Situs nggak valid')).toBeVisible();
+    await card.getByRole('button', { name: 'Add' }).click();
+    await expect(card.getByText('Invalid site')).toBeVisible();
     await expect(input).toHaveAttribute('aria-invalid', 'true');
     expect((await getSettings()).activeSites).toEqual([]);
 
     await input.fill('https://WWW.Site-A.test/path');
-    await card.getByRole('button', { name: 'Tambah' }).click();
-    await expect(card.getByRole('button', { name: 'Hapus site-a.test' })).toBeVisible();
+    await card.getByRole('button', { name: 'Add' }).click();
+    await expect(card.getByRole('button', { name: 'Remove site-a.test' })).toBeVisible();
     await expect(input).toHaveValue('');
     expect((await getSettings()).activeSites).toEqual(['site-a.test']);
     await expect.poll(async () => (await ran(await visit('www.site-a.test'))).loaded).toEqual([]);
@@ -245,12 +245,12 @@ test.describe('options page', () => {
     await openOptions(page, extensionId);
     const titles = (await page.locator('.section-title').allTextContents()).map((t) => t.replace(/\d+$/, ''));
     expect(titles).toEqual([
-      'Situs aktif',
-      'Rule izin',
-      'Blok global',
-      'Daftar publik',
-      'Inline script diizinkan',
-      'Pengaturan',
+      'Active sites',
+      'Allow rules',
+      'Global blocks',
+      'Public lists',
+      'Inline scripts allowed',
+      'Settings',
       'Backup',
     ]);
   });
@@ -260,8 +260,8 @@ test.describe('options page', () => {
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
-    await page.getByRole('button', { name: 'Hapus news.test' }).click();
-    await page.getByRole('button', { name: 'Hapus github.test' }).click();
+    await page.getByRole('button', { name: 'Remove news.test' }).click();
+    await page.getByRole('button', { name: 'Remove github.test' }).click();
     await expect
       .poll(async () => {
         const s = await getSettings();
@@ -309,9 +309,7 @@ test.describe('options page', () => {
 
     await setSettings({ ...DEFAULTS, activeSites: [] });
     await page.locator('input[type=file]').setInputFiles(file);
-    await expect(
-      page.getByText('3 rule dibaca dan digabung (duplikat dilewati). EasyPrivacy diaktifkan.'),
-    ).toBeVisible();
+    await expect(page.getByText('3 rules read and merged (duplicates skipped). EasyPrivacy turned on.')).toBeVisible();
     const s = await getSettings();
     expect(s.rules.map((r) => [r.domain, r.scope, r.script])).toEqual([
       ['cdn.test', 'global', 'a.js'],
@@ -320,7 +318,7 @@ test.describe('options page', () => {
     expect(s.blocks.map((b) => b.domain)).toEqual(['tracker.test']);
     expect(s.activeSites).toEqual(['news.test']);
     expect([s.lists, s.listAllow]).toEqual([['easyprivacy'], ['cdn.test']]);
-    await expect(page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('switch', { name: 'Turn on EasyPrivacy' })).toHaveAttribute('aria-checked', 'true');
   });
 
   test('importing a backup whose list cannot be downloaded says so and leaves it off', async ({
@@ -350,12 +348,14 @@ test.describe('options page', () => {
 
     await page.locator('input[type=file]').setInputFiles(file);
     await expect(
-      page.getByRole('status').filter({ hasText: 'EasyPrivacy belum aktif: Gagal unduh EasyPrivacy: HTTP 503' }),
+      page
+        .getByRole('status')
+        .filter({ hasText: "EasyPrivacy is not on yet: Couldn't download EasyPrivacy: HTTP 503" }),
     ).toBeVisible();
     expect((await getSettings()).lists).toEqual([]);
   });
 
-  test('the language picked in Settings applies to the options page, the popup and background errors', async ({
+  test('English by default; the language picked in Settings applies to the page, the popup and background errors', async ({
     setSettings,
     context,
     extensionId,
@@ -366,23 +366,29 @@ test.describe('options page', () => {
     await setSettings(DEFAULTS);
     await context.route(LIST_URL, (r) => r.fulfill({ status: 503, body: 'down' }));
     const page = await context.newPage();
+    // The test browser is Indonesian, and the page is still English.
     await openOptions(page, extensionId);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+    await Promise.all([page.waitForEvent('load'), page.getByLabel('Language', { exact: true }).selectOption('id')]);
+    await expect(page.getByRole('region', { name: /^Rule izin/ })).toBeVisible();
+    await expect(page).toHaveTitle('Aegis — Rule');
+    expect((await getSettings()).lang).toBe('id');
+
+    const popup = await openPopup(await visit('www.shop.test'));
+    await expect(popup.locator('.section-title').first()).toHaveText('Keblok di halaman ini');
+
+    // Written by the background, which follows the same choice.
+    await page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' }).click();
+    await expect(page.getByRole('alert')).toHaveText('Gagal unduh EasyPrivacy: HTTP 503');
+
+    // Following the browser gives Indonesian here, since the test browser is Indonesian.
+    await Promise.all([page.waitForEvent('load'), page.getByLabel('Bahasa', { exact: true }).selectOption('auto')]);
+    await expect(page.getByRole('region', { name: /^Rule izin/ })).toBeVisible();
+    expect((await getSettings()).lang).toBe('auto');
 
     await Promise.all([page.waitForEvent('load'), page.getByLabel('Bahasa', { exact: true }).selectOption('en')]);
     await expect(page.getByRole('region', { name: /^Allow rules/ })).toBeVisible();
-    await expect(page).toHaveTitle('Aegis — Rules');
-    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    expect((await getSettings()).lang).toBe('en');
-
-    const popup = await openPopup(await visit('www.shop.test'));
-    await expect(popup.locator('.section-title').first()).toHaveText('Blocked on this page');
-
-    // Written by the background, which follows the same choice.
-    await page.getByRole('switch', { name: 'Turn on EasyPrivacy' }).click();
-    await expect(page.getByRole('alert')).toHaveText("Couldn't download EasyPrivacy: HTTP 503");
-
-    await Promise.all([page.waitForEvent('load'), page.getByLabel('Language', { exact: true }).selectOption('auto')]);
-    await expect(page.getByRole('region', { name: /^Rule izin/ })).toBeVisible();
     expect('lang' in (await getSettings())).toBe(false);
   });
 });
