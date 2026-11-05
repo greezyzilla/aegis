@@ -1,12 +1,14 @@
 import { browser, storage } from '#imports';
 import { useEffect, useState } from 'react';
 import { Switch } from '@/components/Switch';
+import { t } from '@/lib/i18n';
 import { LIST_IDS, LISTS, listDataItem, listErrorItem, type ListData, type ListId } from '@/lib/lists';
 import { readAndWatch } from '@/lib/readAndWatch';
 import { disableList, setListAllow } from '@/lib/settings';
 import { LIST_REFRESH, listDroppedKey, type ListRefreshMessage, type ListRefreshResult } from '@/lib/tabs';
 import type { Settings } from '@/lib/types';
-import { t } from '@/lib/i18n';
+import { Avatar, Count, HostName, Icon } from '../popup/parts';
+import { Section } from '../popup/Section';
 
 /** Asks the background to download a list; it enables the list once the download succeeds. */
 export function requestRefresh(id: ListId): Promise<ListRefreshResult> {
@@ -16,37 +18,42 @@ export function requestRefresh(id: ListId): Promise<ListRefreshResult> {
 
 export function PublicLists({ settings }: { settings: Settings }) {
   return (
-    <section className="card">
-      <h2>{t.publicListsTitle}</h2>
-      <p className="muted">{t.publicListsDesc}</p>
-      <ul className="public-lists" role="list">
+    <Section id="lists-title" title={t.publicListsTitle} aside={t.publicListsAside}>
+      <ul className="group" role="list">
         {LIST_IDS.map((id) => (
           <PublicList key={id} id={id} enabled={settings.lists.includes(id)} />
         ))}
-      </ul>
-      <h3 className="subhead">
-        {t.allowedFromList} <span className="muted">({settings.listAllow.length})</span>
-      </h3>
-      {settings.listAllow.length === 0 ? (
-        <p className="empty muted">{t.noListAllow}</p>
-      ) : (
-        <ul className="chips" role="list">
-          {settings.listAllow.map((h) => (
-            <li key={h} className="chip">
-              <span className="mono">{h}</span>
+        <li className="row scope-head">
+          <span className="row-main">
+            <HostName name={t.allowedFromList} />
+            <Count n={settings.listAllow.length} tone="neutral" />
+          </span>
+        </li>
+        {settings.listAllow.length === 0 ? (
+          <li className="row">
+            <span className="empty-row">{t.noListAllow}</span>
+          </li>
+        ) : (
+          settings.listAllow.map((h) => (
+            <li key={h} className="row rule-row">
+              <span className="row-main">
+                <span className="chevron" />
+                <Avatar host={h} />
+                <HostName name={h} />
+              </span>
               <button
                 type="button"
-                className="chip-remove"
+                className="btn btn-ghost"
                 onClick={() => void setListAllow(h, false)}
                 aria-label={t.reblockFromList(h)}
               >
-                ×
+                {t.reblock}
               </button>
             </li>
-          ))}
-        </ul>
-      )}
-    </section>
+          ))
+        )}
+      </ul>
+    </Section>
   );
 }
 
@@ -87,6 +94,7 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
 
   const unblocks = data?.filters?.filter((f) => f.allow).length ?? 0;
   const paths = (data?.filters?.length ?? 0) - unblocks;
+  const ready = enabled && data && !busy;
 
   const refresh = async () => {
     setBusy(true);
@@ -97,13 +105,21 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
 
   return (
     <li className="public-list">
-      <div className="public-list-head">
-        <div>
-          <span className="public-list-name">{list.name}</span>
-          <span className="muted block">
-            {new URL(list.url).host} · {t.license(list.license)}
+      <div className="row">
+        <span className="row-main">
+          <span className="lead-ico">{Icon.shield}</span>
+          <span className="row-text">
+            <b>{list.name}</b>
+            <span>
+              {new URL(list.url).host} · {t.license(list.license)}
+            </span>
           </span>
-        </div>
+        </span>
+        {ready && (
+          <button type="button" className="btn" onClick={() => void refresh()}>
+            {t.refreshNow}
+          </button>
+        )}
         <Switch
           checked={enabled}
           disabled={busy}
@@ -112,27 +128,22 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
         />
       </div>
       {busy && (
-        <p className="muted block" role="status">
+        <p className="list-note" role="status">
           {t.downloading(list.name)}
         </p>
       )}
-      {enabled && data && !busy && (
-        <div className="public-list-meta">
-          <span className="muted">
-            {t.listStats(data.domains.length, paths, data.exceptions.length + unblocks, data.updatedAt)}
-          </span>
-          <button type="button" className="btn" onClick={() => void refresh()}>
-            {t.refreshNow}
-          </button>
-        </div>
+      {ready && (
+        <p className="list-note">
+          {t.listStats(data.domains.length, paths, data.exceptions.length + unblocks, data.updatedAt)}
+        </p>
       )}
-      {enabled && data && !busy && !!dropped && (
-        <p className="muted block" role="note">
+      {ready && !!dropped && (
+        <p className="list-note" role="note">
           {t.pathsDropped(dropped)}
         </p>
       )}
       {error && !busy && (
-        <p className="field-error" role="alert">
+        <p className="list-note field-error" role="alert">
           {error}
         </p>
       )}

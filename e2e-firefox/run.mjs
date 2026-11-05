@@ -315,17 +315,9 @@ try {
   );
   await ff.openExtPage('options.html');
   await expectEventually(
-    'options renders every card',
-    () => ff.run(() => [...document.querySelectorAll('.card > h2')].map((h) => h.firstChild.textContent.trim())),
-    [
-      'Situs aktif',
-      'Blok global',
-      'Daftar publik',
-      'Tambah rule izin',
-      'Inline script diizinkan',
-      'Pengaturan',
-      'Backup',
-    ],
+    'options renders every section',
+    () => ff.run(() => [...document.querySelectorAll('.section-title')].map((h) => h.firstChild.textContent.trim())),
+    ['Situs aktif', 'Rule izin', 'Blok global', 'Daftar publik', 'Inline script diizinkan', 'Pengaturan', 'Backup'],
   );
 } catch (e) {
   failures.push(`crashed: ${e.message}`);

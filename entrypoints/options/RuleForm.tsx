@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { isValidDomain, isValidScript, normalizeDomain, normalizeScript } from '@/lib/domain';
-import type { NewRule } from '@/lib/types';
 import { t } from '@/lib/i18n';
+import type { NewRule } from '@/lib/types';
 
 interface Props {
   initial?: NewRule;
@@ -14,6 +14,7 @@ interface Props {
 
 type Errors = Partial<Record<'domain' | 'script' | 'site', string>>;
 
+/** One row of inputs, like the popup's rows; labels stay for screen readers, placeholders show the format. */
 export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope = true }: Props) {
   const id = useId();
   const [domain, setDomain] = useState(initial?.domain ?? '');
@@ -46,17 +47,14 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
     'aria-invalid': !!errors[name],
     'aria-describedby': errors[name] ? `${id}-${name}-err` : undefined,
   });
-  const error = (name: keyof Errors) =>
-    errors[name] && (
-      <span id={`${id}-${name}-err`} className="field-error">
-        {errors[name]}
-      </span>
-    );
+  const shown = (['domain', 'script', 'site'] as const).filter((n) => errors[n]);
 
   return (
-    <form className={withScope ? 'rule-form' : 'rule-form rule-form-noscope'} onSubmit={submit} noValidate>
-      <div className="field">
-        <label htmlFor={`${id}-domain`}>{t.scriptDomain}</label>
+    <form className="rule-form" onSubmit={submit} noValidate>
+      <div className="row add-row">
+        <label className="sr-only" htmlFor={`${id}-domain`}>
+          {t.scriptDomain}
+        </label>
         <input
           {...field('domain')}
           className="input mono"
@@ -65,29 +63,25 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
           placeholder="cdn.jsdelivr.net"
           autoComplete="off"
         />
-        {error('domain')}
-      </div>
-      <div className="field">
-        <label htmlFor={`${id}-script`}>
-          {t.scriptName} <span className="muted">{t.optional}</span>
+        <label className="sr-only" htmlFor={`${id}-script`}>
+          {t.scriptName} {t.optional}
         </label>
         <input
           {...field('script')}
-          className="input mono"
+          className="input mono input-narrow"
           value={script}
           onChange={(e) => setScript(e.target.value)}
-          placeholder="jquery.min.js"
+          placeholder={`jquery.min.js ${t.optional}`}
           autoComplete="off"
         />
-        {error('script')}
-      </div>
-      {withScope && (
-        <div className="field">
-          <label htmlFor={`${id}-scope`}>{t.colScope}</label>
-          <div className="scope-input">
+        {withScope && (
+          <>
+            <label className="sr-only" htmlFor={`${id}-scope`}>
+              {t.colScope}
+            </label>
             <select
               id={`${id}-scope`}
-              className="input"
+              className="input input-select"
               value={isGlobal ? 'global' : 'site'}
               onChange={(e) => setIsGlobal(e.target.value === 'global')}
             >
@@ -98,27 +92,33 @@ export function RuleForm({ initial, submitLabel, onSubmit, onCancel, withScope =
               <input
                 {...field('site')}
                 aria-label={t.site}
-                className="input mono"
+                className="input mono input-narrow"
                 value={site}
                 onChange={(e) => setSite(e.target.value)}
                 placeholder="github.com"
                 autoComplete="off"
               />
             )}
-          </div>
-          {error('site')}
-        </div>
-      )}
-      <div className="form-actions">
+          </>
+        )}
         <button type="submit" className="btn btn-primary">
           {submitLabel}
         </button>
         {onCancel && (
-          <button type="button" className="btn" onClick={onCancel}>
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>
             {t.cancel}
           </button>
         )}
       </div>
+      {shown.length > 0 && (
+        <div className="form-errors">
+          {shown.map((n) => (
+            <span key={n} id={`${id}-${n}-err`} className="field-error">
+              {errors[n]}
+            </span>
+          ))}
+        </div>
+      )}
     </form>
   );
 }

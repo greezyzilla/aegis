@@ -1,15 +1,16 @@
 import { useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
+import { t } from '@/lib/i18n';
+import { LIST_IDS, LISTS } from '@/lib/lists';
 import { addBlocks, addRules, isAutoReload, removeSite, setAutoReload, setSiteFlag } from '@/lib/settings';
 import { useSettings } from '@/lib/useSettings';
+import { Section } from '../popup/Section';
 import { exportSettings, importSettings } from './backup';
-import { BlockTable } from './BlockTable';
-import { LISTS } from '@/lib/lists';
+import { BlockList } from './BlockList';
 import { PublicLists, requestRefresh } from './PublicLists';
 import { RuleForm } from './RuleForm';
-import { RuleTable } from './RuleTable';
+import { RuleList } from './RuleList';
 import { SiteList } from './SiteList';
-import { t } from '@/lib/i18n';
 
 export default function App() {
   const settings = useSettings();
@@ -53,130 +54,159 @@ export default function App() {
     }
   };
 
+  const rulesOn = (site: string) => settings.rules.filter((r) => r.scope === site).length;
+
   return (
-    <main className="options">
-      <header className="options-header">
-        <div>
-          <h1>Aegis</h1>
-          <p className="muted">{t.intro}</p>
+    <main className="opt">
+      <header className="site site-active">
+        <div className="site-top">
+          <div className="brand">
+            <img src="/icon/32.png" alt="" width={20} height={20} />
+            <h1>Aegis</h1>
+          </div>
+        </div>
+        <p className="site-host">{t.optionsHeading}</p>
+        <p className="site-sub">{t.intro}</p>
+        <div className="flags">
+          <span className="flag">
+            <span className="dot dot-allowed" />
+            {t.summarySites(settings.activeSites.length)}
+          </span>
+          <span className="flag">
+            <span className="dot dot-allowed" />
+            {t.summaryRules(settings.rules.length)}
+          </span>
+          <span className="flag">
+            <span className="dot dot-blocked" />
+            {t.summaryBlocks(settings.blocks.length)}
+          </span>
+          {LIST_IDS.map((id) => {
+            const on = settings.lists.includes(id);
+            return (
+              <span key={id} className="flag">
+                <span className={`dot ${on ? 'dot-blocked' : 'dot-neutral'}`} />
+                {t.summaryList(LISTS[id].name, on)}
+              </span>
+            );
+          })}
         </div>
       </header>
 
       <SiteList
+        id="active-title"
         title={t.activeSitesTitle}
-        description={t.activeSitesDesc}
+        aside={t.activeSitesAside}
         sites={settings.activeSites}
         onAdd={(site) => setSiteFlag('activeSites', site, site, true)}
         addLabel={t.addActiveSite}
         onRemove={(s) => void removeSite('activeSites', s)}
+        extra={(s) => (
+          <>
+            {rulesOn(s) > 0 && <span className="count count-allowed">{t.ruleCount(rulesOn(s))}</span>}
+            {settings.inlineSites.includes(s) && <span className="count count-allowed">{t.inlineTag}</span>}
+          </>
+        )}
       />
 
-      <section className="card">
-        <h2>
-          {t.globalBlocksTitle} <span className="muted">({settings.blocks.length})</span>
-        </h2>
-        <p className="muted">{t.globalBlocksDesc}</p>
-        <RuleForm
-          submitLabel={t.block}
-          withScope={false}
-          onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
-        />
-        <BlockTable blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))} />
-      </section>
+      <Section id="rules-title" title={t.allowRulesTitle} count={settings.rules.length} aside={t.rulesAside}>
+        <div className="filters">
+          <input
+            type="search"
+            className="input"
+            aria-label={t.searchRules}
+            placeholder={t.searchPlaceholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <select
+            className="input input-select"
+            aria-label={t.filterScope}
+            value={scopeFilter}
+            onChange={(e) => setScopeFilter(e.target.value)}
+          >
+            <option value="all">{t.all}</option>
+            <option value="global">{t.global}</option>
+            {sites.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <ul className="group" role="list">
+          <li>
+            <RuleForm submitLabel={t.add} onSubmit={(r) => addRules([r])} />
+          </li>
+          <RuleList rules={filtered} emptyText={settings.rules.length ? t.noMatch : t.noRules} />
+        </ul>
+      </Section>
+
+      <Section id="blocks-title" title={t.globalBlocksTitle} count={settings.blocks.length} aside={t.globalBlocksAside}>
+        <ul className="group" role="list">
+          <li>
+            <RuleForm
+              submitLabel={t.block}
+              withScope={false}
+              onSubmit={({ domain, script }) => addBlocks([{ domain, script }])}
+            />
+          </li>
+          <BlockList blocks={[...settings.blocks].sort((a, b) => a.domain.localeCompare(b.domain))} />
+        </ul>
+      </Section>
 
       <PublicLists settings={settings} />
 
-      <section className="card">
-        <h2>{t.addAllowTitle}</h2>
-        <RuleForm submitLabel={t.add} onSubmit={(r) => addRules([r])} />
-        <p className="muted hint">
-          {t.ruleHint[0]}
-          <span className="mono">example.com</span>
-          {t.ruleHint[1]}
-          <span className="mono">cdn.example.com</span>
-          {t.ruleHint[2]}
-          <span className="mono">*</span>
-          {t.ruleHint[3]}
-        </p>
-      </section>
-
-      <section className="card">
-        <div className="card-head">
-          <h2>
-            {t.allowRulesTitle} <span className="muted">({settings.rules.length})</span>
-          </h2>
-          <div className="filters">
-            <input
-              type="search"
-              className="input"
-              aria-label={t.searchRules}
-              placeholder={t.searchPlaceholder}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <select
-              className="input"
-              aria-label={t.filterScope}
-              value={scopeFilter}
-              onChange={(e) => setScopeFilter(e.target.value)}
-            >
-              <option value="all">{t.all}</option>
-              <option value="global">{t.global}</option>
-              {sites.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <RuleTable rules={filtered} emptyText={settings.rules.length ? t.noMatch : t.noRules} />
-      </section>
-
       <SiteList
+        id="inline-title"
         title={t.inlineTitle}
-        description={t.inlineDesc}
+        aside={t.inlineAside}
         sites={settings.inlineSites}
         onAdd={(site) => setSiteFlag('inlineSites', site, site, true)}
         addLabel={t.addInlineSite}
         onRemove={(s) => void removeSite('inlineSites', s)}
       />
 
-      <div className="grid-2">
-        <section className="card">
-          <h2>{t.settingsTitle}</h2>
-          <Switch checked={isAutoReload(settings)} onChange={(v) => void setAutoReload(v)} label={t.autoReload}>
-            <span>
-              {t.autoReload}
-              <span className="muted block">{t.autoReloadDesc}</span>
-            </span>
-          </Switch>
-        </section>
+      <div className="two">
+        <Section id="settings-title" title={t.settingsTitle}>
+          <ul className="group" role="list">
+            <li className="row">
+              <span className="row-text">
+                <b>{t.autoReload}</b>
+                <span>{t.autoReloadDesc}</span>
+              </span>
+              <Switch checked={isAutoReload(settings)} onChange={(v) => void setAutoReload(v)} label={t.autoReload} />
+            </li>
+          </ul>
+        </Section>
 
-        <section className="card">
-          <h2>{t.backupTitle}</h2>
-          <p className="muted">{t.backupDesc}</p>
-          <div className="form-actions">
-            <button type="button" className="btn" onClick={() => exportSettings(settings)}>
-              {t.exportJson}
-            </button>
-            <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-              {t.importJson}
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json,.json"
-              hidden
-              onChange={(e) => void onImport(e.target.files?.[0])}
-            />
-          </div>
+        <Section id="backup-title" title={t.backupTitle}>
+          <ul className="group" role="list">
+            <li className="row">
+              <span className="row-text">
+                <b>{t.backupRow}</b>
+                <span>{t.backupDesc}</span>
+              </span>
+              <button type="button" className="btn" onClick={() => exportSettings(settings)}>
+                {t.exportBtn}
+              </button>
+              <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+                {t.importBtn}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => void onImport(e.target.files?.[0])}
+              />
+            </li>
+          </ul>
           {status && (
-            <p className={`notice ${status.error ? 'notice-error' : ''}`} role="status">
+            <p className={`notice status ${status.error ? 'notice-error' : ''}`} role="status">
               {status.text}
             </p>
           )}
-        </section>
+        </Section>
       </div>
     </main>
   );
