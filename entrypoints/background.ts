@@ -210,14 +210,14 @@ export default defineBackground(() => {
     if (!host) return;
 
     const state = await getState(details.tabId);
-    // Chrome reports the initiator, Firefox only originUrl. The list check needs it on both.
-    const from = hostFromUrl(details.initiator ?? details.originUrl) ?? '';
-    const list = blocked ? (await matchers).find((m) => m.covers(details.url, from))?.id : undefined;
+    // Chrome reports the initiator, Firefox only originUrl (the document that loads the script).
+    const initiator = hostFromUrl(details.initiator ?? details.originUrl) ?? '';
+    const list = blocked ? (await matchers).find((m) => m.covers(details.url, initiator))?.id : undefined;
     const entry: ScriptEntry = {
       url: details.url,
       host,
       file: fileFromUrl(details.url),
-      initiator: hostFromUrl(details.initiator) ?? '',
+      initiator,
       blocked,
       ...(list && { list }),
     };

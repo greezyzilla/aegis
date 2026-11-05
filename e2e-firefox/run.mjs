@@ -96,6 +96,7 @@ try {
       return {
         blocked: state.scripts.filter((s) => s.blocked).length,
         lists: state.scripts.filter((s) => s.list).map((s) => s.list),
+        initiators: state.scripts.map((s) => `${s.host}/${s.file} < ${s.initiator}`).sort(),
         inline: state.inline,
         page: state.page,
         badge: await browser.action.getBadgeText({ tabId: tab.id }),
@@ -152,6 +153,17 @@ try {
   await expectEventually('per-site rule applies on its site', async () => (await ran('site-a.test')).loaded, [
     'other.test/d.js',
   ]);
+  await expectEventually(
+    'script log records the initiating site (originUrl)',
+    async () => (await tabView('site-a.test')).initiators,
+    [
+      'cdn.test/a.js < site-a.test',
+      'cdn.test/b.js < site-a.test',
+      'other.test/d.js < site-a.test',
+      'site-a.test/self.js < site-a.test',
+      'sub.cdn.test/c.js < site-a.test',
+    ],
+  );
   await expectEventually('per-site rule not elsewhere', async () => (await ran('site-b.test')).loaded, []);
   await set({ ...BASE, activeSites: ['test'], inlineSites: ['site-a.test'] });
   await expectEventually('inline allowed per site', () => ran('site-a.test'), { inline: true, loaded: [] });
@@ -169,6 +181,11 @@ try {
     inline: true,
     loaded: ['cdn.test/lib/a.js'],
   });
+  await expectEventually(
+    'a script inside an iframe is logged with the iframe as initiator',
+    async () => (await tabView('stream.test')).initiators,
+    ['cdn.test/a.js < player.test'],
+  );
 
   console.log('\nGlobal blocks');
   await set({ ...BASE, blocks: [block('other.test')], activeSites: ['site-a.test'], rules: [rule('other.test')] });
