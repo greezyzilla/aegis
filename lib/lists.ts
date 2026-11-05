@@ -48,7 +48,8 @@ export interface ListData {
 export const listDataItem = (id: ListId) => storage.defineItem<ListData | null>(`local:list:${id}`, { fallback: null });
 
 /** Last download problem per list, shown in Options. */
-export const listErrorItem = (id: ListId) => storage.defineItem<string | null>(`local:listError:${id}`, { fallback: null });
+export const listErrorItem = (id: ListId) =>
+  storage.defineItem<string | null>(`local:listError:${id}`, { fallback: null });
 
 /** A download smaller than this is treated as broken (error page, truncated file), keeping the old data. */
 export const MIN_LIST_DOMAINS = 1000;
@@ -56,7 +57,28 @@ export const MIN_LIST_DOMAINS = 1000;
 const DOMAIN_PATTERN = /^\|\|([a-z0-9.-]+)\^$/;
 const COSMETIC = /#[@?$%]*#/;
 /** ABP resource types; `all` covers every type. */
-const TYPES = new Set(['script', 'image', 'stylesheet', 'css', 'object', 'xmlhttprequest', 'xhr', 'subdocument', 'frame', 'ping', 'beacon', 'media', 'font', 'websocket', 'webrtc', 'other', 'popup', 'document', 'doc', 'all']);
+const TYPES = new Set([
+  'script',
+  'image',
+  'stylesheet',
+  'css',
+  'object',
+  'xmlhttprequest',
+  'xhr',
+  'subdocument',
+  'frame',
+  'ping',
+  'beacon',
+  'media',
+  'font',
+  'websocket',
+  'webrtc',
+  'other',
+  'popup',
+  'document',
+  'doc',
+  'all',
+]);
 const THIRD_PARTY = new Set(['third-party', '3p', '~first-party', '~1p']);
 const FIRST_PARTY = new Set(['first-party', '1p', '~third-party', '~3p']);
 

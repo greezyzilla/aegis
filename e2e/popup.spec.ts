@@ -8,14 +8,22 @@ async function reloadFromPopup(popup: Page, target: Page) {
 }
 
 test.describe('popup', () => {
-  test('lists blocked scripts grouped by domain, with a badge count', async ({ setSettings, visit, openPopup, sw, tabIdOf }) => {
+  test('lists blocked scripts grouped by domain, with a badge count', async ({
+    setSettings,
+    visit,
+    openPopup,
+    sw,
+    tabIdOf,
+  }) => {
     await setSettings(DEFAULTS);
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
     await expect(popup.getByText('www.shop.test').first()).toBeVisible();
     for (const host of ['www.shop.test', 'cdn.test', 'sub.cdn.test', 'other.test']) {
-      await expect(popup.getByRole('button', { name: new RegExp(`^${host.replace(/\./g, '\\.')} \\d+$`) })).toBeVisible();
+      await expect(
+        popup.getByRole('button', { name: new RegExp(`^${host.replace(/\./g, '\\.')} \\d+$`) }),
+      ).toBeVisible();
     }
     await expect(popup.getByRole('button', { name: /^cdn\.test 2$/ })).toBeVisible();
 
@@ -23,15 +31,21 @@ test.describe('popup', () => {
     await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('5');
   });
 
-  test('"Global" on a domain allows it after reload, on every site', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+  test('"Global" on a domain allows it after reload, on every site', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+    getSettings,
+  }) => {
     await setSettings(DEFAULTS);
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
     await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
-    await expect.poll(async () => (await getSettings()).rules.map((r) => [r.domain, r.scope, r.script])).toEqual([
-      ['cdn.test', 'global', undefined],
-    ]);
+    await expect
+      .poll(async () => (await getSettings()).rules.map((r) => [r.domain, r.scope, r.script]))
+      .toEqual([['cdn.test', 'global', undefined]]);
     await reloadFromPopup(popup, site);
 
     // A domain rule also covers its subdomains (sub.cdn.test).
@@ -39,20 +53,28 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toEqual(cdn);
     expect((await ran(await visit('elsewhere.test'))).loaded).toEqual(cdn);
     // Still listed under "Script jalan", but no longer as blocked.
-    await expect(popup.getByRole('region', { name: /Keblok di halaman ini/ }).getByRole('button', { name: /^cdn\.test \d/ })).toHaveCount(0);
+    await expect(
+      popup.getByRole('region', { name: /Keblok di halaman ini/ }).getByRole('button', { name: /^cdn\.test \d/ }),
+    ).toHaveCount(0);
     await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toContainText('Global');
   });
 
-  test('"Situs ini" on a single file allows only that file, only on this site', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+  test('"Situs ini" on a single file allows only that file, only on this site', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+    getSettings,
+  }) => {
     await setSettings(DEFAULTS);
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
     await popup.getByRole('button', { name: /^cdn\.test 2$/ }).click();
     await popup.getByRole('button', { name: 'Izinkan b.js di situs ini' }).click();
-    await expect.poll(async () => (await getSettings()).rules.map((r) => [r.domain, r.scope, r.script])).toEqual([
-      ['cdn.test', 'shop.test', 'b.js'],
-    ]);
+    await expect
+      .poll(async () => (await getSettings()).rules.map((r) => [r.domain, r.scope, r.script]))
+      .toEqual([['cdn.test', 'shop.test', 'b.js']]);
     await expect(popup.locator('.file', { hasText: 'b.js' })).toContainText('diizinkan');
     await expect(popup.locator('.file', { hasText: 'a.js' }).getByRole('button', { name: 'Situs ini' })).toBeVisible();
     await reloadFromPopup(popup, site);
@@ -61,7 +83,13 @@ test.describe('popup', () => {
     expect((await ran(await visit('elsewhere.test'))).loaded).toEqual([]);
   });
 
-  test('active and inline toggles apply to the current site', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+  test('active and inline toggles apply to the current site', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: ['shop.test'] });
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
@@ -97,21 +125,34 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toEqual([]);
   });
 
-  test('inactive site: only "Script jalan", and a script can be blocked on every site', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+  test('inactive site: only "Script jalan", and a script can be blocked on every site', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await expect(popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' })).toHaveAttribute('aria-checked', 'false');
+    await expect(popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
     await expect(popup.getByRole('heading', { name: /Keblok di halaman ini/ })).toHaveCount(0);
     await expect(popup.getByText('Belum ada blok global yang kena di halaman ini.')).toBeVisible();
 
     await popup.getByRole('button', { name: 'Blok other.test di semua situs' }).click();
-    await expect.poll(async () => (await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['other.test', undefined]]);
+    await expect
+      .poll(async () => (await getSettings()).blocks.map((b) => [b.domain, b.script]))
+      .toEqual([['other.test', undefined]]);
     await expect(popup.locator('.loaded-host', { hasText: 'other.test' })).toContainText('diblok');
     await reloadFromPopup(popup, site);
 
-    const withoutOther = ALL_SCRIPTS('shop.test').map((s) => s.replace('shop.test', 'www.shop.test')).filter((s) => s !== 'other.test/d.js');
+    const withoutOther = ALL_SCRIPTS('shop.test')
+      .map((s) => s.replace('shop.test', 'www.shop.test'))
+      .filter((s) => s !== 'other.test/d.js');
     expect((await ran(site)).loaded).toEqual(withoutOther.sort());
     await expect(popup.locator('.block-rule', { hasText: 'other.test' })).toContainText('1 keblok');
 
@@ -120,7 +161,11 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toHaveLength(5);
   });
 
-  test('globally blocked scripts on an active site are not offered for allowing', async ({ setSettings, visit, openPopup }) => {
+  test('globally blocked scripts on an active site are not offered for allowing', async ({
+    setSettings,
+    visit,
+    openPopup,
+  }) => {
     await setSettings({ ...DEFAULTS, blocks: [block('other.test')] });
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
@@ -140,7 +185,13 @@ test.describe('popup', () => {
     await expect(popup!.getByText(/nggak bisa diatur/)).toBeVisible();
   });
 
-  test('closing the popup after a change reloads the tab once', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+  test('closing the popup after a change reloads the tab once', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+    getSettings,
+  }) => {
     await setSettings(DEFAULTS);
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
@@ -152,7 +203,12 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toEqual(['cdn.test/lib/a.js', 'cdn.test/lib/b.js', 'sub.cdn.test/c.js']);
   });
 
-  test('closing the popup without a change, or with auto-reload off, does not reload', async ({ setSettings, visit, openPopup, getSettings }) => {
+  test('closing the popup without a change, or with auto-reload off, does not reload', async ({
+    setSettings,
+    visit,
+    openPopup,
+    getSettings,
+  }) => {
     await setSettings(DEFAULTS);
     const site = await visit('www.shop.test');
     let loads = 0;
@@ -170,16 +226,28 @@ test.describe('popup', () => {
     expect(loads).toBe(0);
   });
 
-  test('a single file can be blocked globally from "Script jalan"', async ({ setSettings, visit, openPopup, ran, getSettings }) => {
+  test('a single file can be blocked globally from "Script jalan"', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const site = await visit('site-a.test');
     const popup = await openPopup(site);
 
     await popup.getByRole('button', { name: /^cdn\.test 2$/ }).click();
     await popup.getByRole('button', { name: 'Blok b.js di semua situs' }).click();
-    await expect.poll(async () => (await getSettings()).blocks.map((b) => [b.domain, b.script])).toEqual([['cdn.test', 'b.js']]);
+    await expect
+      .poll(async () => (await getSettings()).blocks.map((b) => [b.domain, b.script]))
+      .toEqual([['cdn.test', 'b.js']]);
     await expect(popup.locator('.loaded-host .file', { hasText: 'b.js' })).toContainText('diblok');
-    await expect(popup.locator('.loaded-host .file', { hasText: 'a.js' }).getByRole('button', { name: 'Blok a.js di semua situs' })).toBeVisible();
+    await expect(
+      popup
+        .locator('.loaded-host .file', { hasText: 'a.js' })
+        .getByRole('button', { name: 'Blok a.js di semua situs' }),
+    ).toBeVisible();
     await expect(popup.locator('.block-rule', { hasText: 'cdn.test' })).toContainText('berlaku setelah reload');
     await reloadFromPopup(popup, site);
 
@@ -187,7 +255,12 @@ test.describe('popup', () => {
     expect((await ran(await visit('site-b.test'))).loaded).not.toContain('cdn.test/lib/b.js');
   });
 
-  test('an allowed script on an active site can still be blocked globally', async ({ setSettings, visit, openPopup, ran }) => {
+  test('an allowed script on an active site can still be blocked globally', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+  }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
     const site = await visit('www.shop.test');
     expect((await ran(site)).loaded).toHaveLength(3);
@@ -203,7 +276,12 @@ test.describe('popup', () => {
     await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toBeVisible();
   });
 
-  test('activating a subdomain stores that subdomain; www is stripped', async ({ setSettings, visit, openPopup, getSettings }) => {
+  test('activating a subdomain stores that subdomain; www is stripped', async ({
+    setSettings,
+    visit,
+    openPopup,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const blog = await openPopup(await visit('blog.shop.test'));
     await blog.getByRole('switch', { name: 'Aktifkan blokir di blog.shop.test' }).click();
@@ -214,7 +292,12 @@ test.describe('popup', () => {
     await expect.poll(async () => (await getSettings()).activeSites).toEqual(['blog.shop.test', 'news.test']);
   });
 
-  test('turning a site off from a subdomain removes the parent entry covering it', async ({ setSettings, visit, openPopup, getSettings }) => {
+  test('turning a site off from a subdomain removes the parent entry covering it', async ({
+    setSettings,
+    visit,
+    openPopup,
+    getSettings,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: ['shop.test', 'other-site.test'] });
     const popup = await openPopup(await visit('blog.shop.test'));
     const toggle = popup.getByRole('switch', { name: 'Aktifkan blokir di blog.shop.test' });
@@ -230,7 +313,14 @@ test.describe('popup', () => {
     await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('3');
   });
 
-  test('on an inactive site the badge ignores scripts blocked by another blocker', async ({ setSettings, context, visit, openPopup, sw, tabIdOf }) => {
+  test('on an inactive site the badge ignores scripts blocked by another blocker', async ({
+    setSettings,
+    context,
+    visit,
+    openPopup,
+    sw,
+    tabIdOf,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('cdn.test')] });
     // Stands in for Brave Shields: fails the request with the same net::ERR_BLOCKED_BY_CLIENT.
     await context.route(/other\.test/, (route) => route.abort('blockedbyclient'));
@@ -242,7 +332,14 @@ test.describe('popup', () => {
     await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('3');
   });
 
-  test('on an active site the badge counts every blocked script, and the popup lists them', async ({ setSettings, context, visit, openPopup, sw, tabIdOf }) => {
+  test('on an active site the badge counts every blocked script, and the popup lists them', async ({
+    setSettings,
+    context,
+    visit,
+    openPopup,
+    sw,
+    tabIdOf,
+  }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('other.test')] });
     await context.route(/other\.test/, (route) => route.abort('blockedbyclient'));
     const site = await visit('site-a.test');
@@ -253,7 +350,12 @@ test.describe('popup', () => {
     await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('5');
   });
 
-  test('activating a site and closing the popup reloads the tab with blocking on', async ({ setSettings, visit, openPopup, ran }) => {
+  test('activating a site and closing the popup reloads the tab with blocking on', async ({
+    setSettings,
+    visit,
+    openPopup,
+    ran,
+  }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const site = await visit('www.shop.test');
     expect((await ran(site)).loaded).toHaveLength(5);
@@ -265,7 +367,11 @@ test.describe('popup', () => {
     expect(await ran(site)).toEqual({ inline: false, loaded: [] });
   });
 
-  test('clicking Reload in the popup means closing it does not reload again', async ({ setSettings, visit, openPopup }) => {
+  test('clicking Reload in the popup means closing it does not reload again', async ({
+    setSettings,
+    visit,
+    openPopup,
+  }) => {
     await setSettings(DEFAULTS);
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
@@ -302,7 +408,11 @@ test.describe('popup', () => {
     await expect(inactive.locator('.site-summary')).toHaveText('1 diblok global · 4 jalan');
   });
 
-  test('on an active site "Script jalan" starts folded and "Diblok global" hides when empty', async ({ setSettings, visit, openPopup }) => {
+  test('on an active site "Script jalan" starts folded and "Diblok global" hides when empty', async ({
+    setSettings,
+    visit,
+    openPopup,
+  }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
     const popup = await openPopup(await visit('www.shop.test'));
 
@@ -337,7 +447,13 @@ test.describe('popup', () => {
     expect(box!.y + box!.height).toBeLessThanOrEqual(main!.y + main!.height);
   });
 
-  test('the popup paints its shell and host even while storage reads hang', async ({ setSettings, visit, context, extensionId, tabIdOf }) => {
+  test('the popup paints its shell and host even while storage reads hang', async ({
+    setSettings,
+    visit,
+    context,
+    extensionId,
+    tabIdOf,
+  }) => {
     await setSettings(DEFAULTS);
     const site = await visit('www.shop.test');
     const tabId = await tabIdOf(site);

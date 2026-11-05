@@ -42,16 +42,28 @@ Differences from Chrome:
 - A request blocked by DNR is reported to `webRequest` as `NS_ERROR_ABORT` instead of `net::ERR_BLOCKED_BY_CLIENT`; the background accepts both.
 - The Playwright suite only drives Chromium; `npm run test:firefox` covers Firefox: active and inactive sites, allow rules (global, per site, per script), inline sites, iframes, global blocks, a 47k-domain public list, the popup's script log and badge, and the weekly alarm.
 
+## Release
+
+Versions follow semver and live in `package.json`; WXT copies them into both manifests.
+
+```bash
+npm version patch          # or minor; commits "x.y.z" and tags vx.y.z
+npm run zip                # dist/aegis-x.y.z-chrome.zip
+npm run sign:firefox       # signed .xpi in dist/signed/
+```
+
+Not published to the stores. Brave/Chrome loads `dist/chrome-mv3` unpacked. Firefox release builds only keep signed add-ons installed, so the Firefox build is signed on AMO as **unlisted**: never listed in the store, signed automatically, and installable for good from the `.xpi`. `sign:firefox` needs AMO API credentials (addons.mozilla.org → Developer Hub → Manage API Keys) in `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET`. It uploads the sources zip with the build because the bundle is minified. `wxt.config.ts` keeps `backlog/` and test output out of that zip.
+
 ## How it works
 
 All blocking is done with `declarativeNetRequest` dynamic rules, rebuilt from settings on every change (`lib/rules.ts`):
 
-| Priority | Rule |
-|---|---|
-| 4 | Global block: script domain (+ optional `urlFilter` on the script name), on every site. Each enabled public list is one rule holding all its domains in `requestDomains` (the 30k dynamic-rule cap counts rules, not domains) |
-| 3 | `allowAllRequests` on every top-level page except active sites (`excludedRequestDomains`), so inactive tabs, iframes included, load everything except priority 4 |
-| 2 | Allow rule: script domain (+ optional `urlFilter` on the script name, + optional `initiatorDomains` for a site scope), or an inline-allowed site |
-| 1 | Block every `script` request, and append a CSP header that drops inline scripts |
+| Priority | Rule                                                                                                                                                                                                                          |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4        | Global block: script domain (+ optional `urlFilter` on the script name), on every site. Each enabled public list is one rule holding all its domains in `requestDomains` (the 30k dynamic-rule cap counts rules, not domains) |
+| 3        | `allowAllRequests` on every top-level page except active sites (`excludedRequestDomains`), so inactive tabs, iframes included, load everything except priority 4                                                              |
+| 2        | Allow rule: script domain (+ optional `urlFilter` on the script name, + optional `initiatorDomains` for a site scope), or an inline-allowed site                                                                              |
+| 1        | Block every `script` request, and append a CSP header that drops inline scripts                                                                                                                                               |
 
 Only the top-level page decides whether a tab is active, so an iframe inside an active site is blocked too. Domains match their subdomains. A per-site rule matches the document that loads the script, so scripts inside a third-party iframe follow the iframe's domain.
 

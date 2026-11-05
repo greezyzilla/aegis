@@ -70,7 +70,14 @@ export const ALL_SCRIPTS = (site: string) => [
 ];
 
 /** Blocking on: "test" makes every *.test site active. */
-export const DEFAULTS: Settings = { rules: [], blocks: [], activeSites: ['test'], inlineSites: [], lists: [], listAllow: [] };
+export const DEFAULTS: Settings = {
+  rules: [],
+  blocks: [],
+  activeSites: ['test'],
+  inlineSites: [],
+  lists: [],
+  listAllow: [],
+};
 
 export const rule = (domain: string, scope = 'global', script?: string): AllowRule => ({
   id: `${domain}|${script ?? ''}|${scope}`,
@@ -185,7 +192,10 @@ export const test = base.extend<Fixtures, { port: number }>({
   tabState: async ({ sw, tabIdOf }, use) => {
     await use(async (page) => {
       const id = await tabIdOf(page);
-      const state = await sw.evaluate(async (key) => (await chrome.storage.session.get(key))[key] as TabState | undefined, `tab:${id}`);
+      const state = await sw.evaluate(
+        async (key) => (await chrome.storage.session.get(key))[key] as TabState | undefined,
+        `tab:${id}`,
+      );
       // Background persists with a short delay; treat "not yet written" as empty.
       return state ?? { scripts: [], frames: [], inline: [] };
     });

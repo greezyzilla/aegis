@@ -28,9 +28,12 @@ describe('isValidDomain', () => {
   it.each(['example.com', 'sub.cdn.example.co.id', 'localhost', 'xn--bcher-kva.example'])('accepts %s', (d) => {
     expect(isValidDomain(d)).toBe(true);
   });
-  it.each(['', 'exa mple.com', 'example..com', 'example.com/x', 'ex*ample.com', 'example.com:80'])('rejects %j', (d) => {
-    expect(isValidDomain(d)).toBe(false);
-  });
+  it.each(['', 'exa mple.com', 'example..com', 'example.com/x', 'ex*ample.com', 'example.com:80'])(
+    'rejects %j',
+    (d) => {
+      expect(isValidDomain(d)).toBe(false);
+    },
+  );
 });
 
 describe('normalizeScript / isValidScript', () => {

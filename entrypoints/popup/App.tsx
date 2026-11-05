@@ -184,7 +184,11 @@ export default function App() {
 
           {view.active && (
             <>
-              <Section id="blocked-title" title="Keblok di halaman ini" aside={view.groups.length ? 'Izinkan di' : undefined}>
+              <Section
+                id="blocked-title"
+                title="Keblok di halaman ini"
+                aside={view.groups.length ? 'Izinkan di' : undefined}
+              >
                 <BlockedList groups={view.groups} isAllowed={view.isAllowed} onAllow={allow} />
               </Section>
 

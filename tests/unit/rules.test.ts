@@ -85,7 +85,11 @@ describe('buildDnrRules', () => {
   });
 
   it('global blocks outrank the exemption and the allow rules', () => {
-    const block = (b: Partial<BlockRule> & Pick<BlockRule, 'domain'>): BlockRule => ({ id: b.domain, createdAt: 0, ...b });
+    const block = (b: Partial<BlockRule> & Pick<BlockRule, 'domain'>): BlockRule => ({
+      id: b.domain,
+      createdAt: 0,
+      ...b,
+    });
     const rules = build({
       ...base,
       rules: [rule({ domain: 'tracker.com' })],
@@ -113,7 +117,11 @@ describe('buildDnrRules', () => {
       id: rules.length,
       priority: 4,
       action: { type: 'block' },
-      condition: { resourceTypes: ['script'], requestDomains: ['t1.com', 't2.com'], excludedRequestDomains: ['ok.t1.com', 't2.com'] },
+      condition: {
+        resourceTypes: ['script'],
+        requestDomains: ['t1.com', 't2.com'],
+        excludedRequestDomains: ['ok.t1.com', 't2.com'],
+      },
     });
   });
 
@@ -126,16 +134,28 @@ describe('buildDnrRules', () => {
 
   describe('list filters', () => {
     const on = { ...base, lists: ['easyprivacy'], listAllow: ['mine.com'] };
-    const list = (filters: ListFilter[], domains: string[] = []) => ({ easyprivacy: { domains, exceptions: ['ok.com'], filters } });
+    const list = (filters: ListFilter[], domains: string[] = []) => ({
+      easyprivacy: { domains, exceptions: ['ok.com'], filters },
+    });
 
     it('path entries block scripts at the list priority, minus list exceptions and user overrides', () => {
-      const rules = build(on, list([{ url: '/collect.js' }, { url: '||cdn.com/t.js', sites: ['news.com'], notSites: ['x.news.com'], party: 'third' }]));
+      const rules = build(
+        on,
+        list([
+          { url: '/collect.js' },
+          { url: '||cdn.com/t.js', sites: ['news.com'], notSites: ['x.news.com'], party: 'third' },
+        ]),
+      );
       expect(rules.slice(3)).toEqual([
         {
           id: 4,
           priority: 4,
           action: { type: 'block' },
-          condition: { resourceTypes: ['script'], urlFilter: '/collect.js', excludedRequestDomains: ['ok.com', 'mine.com'] },
+          condition: {
+            resourceTypes: ['script'],
+            urlFilter: '/collect.js',
+            excludedRequestDomains: ['ok.com', 'mine.com'],
+          },
         },
         {
           id: 5,
@@ -164,10 +184,23 @@ describe('buildDnrRules', () => {
       );
       const allows = rules.filter((r) => r.priority === 5);
       expect(allows.map((r) => [r.action.type, r.condition])).toEqual([
-        ['allow', { resourceTypes: ['script'], urlFilter: '||cdn.com/a.js', domainType: 'firstParty', excludedInitiatorDomains: ['shop.com'] }],
         [
           'allow',
-          { resourceTypes: ['script'], urlFilter: '||cdn.com/b.js', initiatorDomains: ['news.com'], excludedInitiatorDomains: ['x.news.com', 'shop.com'] },
+          {
+            resourceTypes: ['script'],
+            urlFilter: '||cdn.com/a.js',
+            domainType: 'firstParty',
+            excludedInitiatorDomains: ['shop.com'],
+          },
+        ],
+        [
+          'allow',
+          {
+            resourceTypes: ['script'],
+            urlFilter: '||cdn.com/b.js',
+            initiatorDomains: ['news.com'],
+            excludedInitiatorDomains: ['x.news.com', 'shop.com'],
+          },
         ],
       ]);
       const userBlock = rules.find((r) => r.priority === 6)!;
@@ -193,7 +226,15 @@ describe('buildDnrRules', () => {
       const cut = buildDnrRules(on, list(filters, ['d.com']), 7);
       expect(cut.dropped).toBe(2);
       expect(cut.rules.map((r) => r.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-      expect(cut.rules.map((r) => r.condition.urlFilter ?? null)).toEqual([null, null, null, null, '||t.com/ok.js', '||t.com/tag', '/a.js']);
+      expect(cut.rules.map((r) => r.condition.urlFilter ?? null)).toEqual([
+        null,
+        null,
+        null,
+        null,
+        '||t.com/ok.js',
+        '||t.com/tag',
+        '/a.js',
+      ]);
     });
 
     it('never cuts anything but path blocks', () => {
@@ -205,9 +246,14 @@ describe('buildDnrRules', () => {
   });
 
   it('checkRuleCount explains an overflow instead of letting the browser reject it', () => {
-    const rules = build({ ...base, blocks: Array.from({ length: 5 }, (_, i) => ({ id: `${i}`, domain: `d${i}.com`, createdAt: 0 })) });
+    const rules = build({
+      ...base,
+      blocks: Array.from({ length: 5 }, (_, i) => ({ id: `${i}`, domain: `d${i}.com`, createdAt: 0 })),
+    });
     expect(() => checkRuleCount(rules, rules.length)).not.toThrow();
-    expect(() => checkRuleCount(rules, rules.length - 1)).toThrow(`Terlalu banyak rule: ${rules.length} dari maksimal ${rules.length - 1}`);
+    expect(() => checkRuleCount(rules, rules.length - 1)).toThrow(
+      `Terlalu banyak rule: ${rules.length} dari maksimal ${rules.length - 1}`,
+    );
   });
 
   it('assigns unique sequential ids', () => {

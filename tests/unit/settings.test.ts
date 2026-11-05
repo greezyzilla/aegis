@@ -50,7 +50,11 @@ describe('settings storage', () => {
 
 describe('global blocks', () => {
   it('adds without duplicates, drops empty script, removes by id', async () => {
-    await addBlocks([{ domain: 'tracker.test', script: '' }, { domain: 'tracker.test' }, { domain: 'ads.test', script: 'px.js' }]);
+    await addBlocks([
+      { domain: 'tracker.test', script: '' },
+      { domain: 'tracker.test' },
+      { domain: 'ads.test', script: 'px.js' },
+    ]);
     const [a, b] = (await get()).blocks;
     expect(a).toMatchObject({ domain: 'tracker.test' });
     expect(a?.script).toBeUndefined();
@@ -62,7 +66,9 @@ describe('global blocks', () => {
 
   it('blockMatches applies on any page', () => {
     const b = { id: '1', domain: 'tracker.test', createdAt: 0 };
-    expect(blockMatches(b, { url: 'https://x.tracker.test/t.js', host: 'x.tracker.test', initiator: 'anything.test' })).toBe(true);
+    expect(
+      blockMatches(b, { url: 'https://x.tracker.test/t.js', host: 'x.tracker.test', initiator: 'anything.test' }),
+    ).toBe(true);
     expect(blockMatches(b, { url: 'https://cdn.test/t.js', host: 'cdn.test', initiator: 'anything.test' })).toBe(false);
   });
 });
@@ -97,7 +103,10 @@ describe('addRules', () => {
 
 describe('editRule / removeRule', () => {
   it('edits in place and removes by id', async () => {
-    await addRules([{ domain: 'a.test', scope: 'global' }, { domain: 'b.test', scope: 'global' }]);
+    await addRules([
+      { domain: 'a.test', scope: 'global' },
+      { domain: 'b.test', scope: 'global' },
+    ]);
     const [a, b] = (await get()).rules;
     await editRule(a!.id, { domain: 'a2.test', script: 'x.js', scope: 'site.test' });
     expect((await get()).rules[0]).toMatchObject({ id: a!.id, domain: 'a2.test', script: 'x.js', scope: 'site.test' });
@@ -136,7 +145,13 @@ describe('site flags', () => {
 });
 
 describe('badgeCount', () => {
-  const entry = (host: string, blocked: boolean) => ({ url: `https://${host}/x.js`, host, file: 'x.js', initiator: 'page.test', blocked });
+  const entry = (host: string, blocked: boolean) => ({
+    url: `https://${host}/x.js`,
+    host,
+    file: 'x.js',
+    initiator: 'page.test',
+    blocked,
+  });
   const scripts = [entry('tracker.test', true), entry('shields.test', true), entry('cdn.test', false)];
   const settings = { ...DEFAULT_SETTINGS, blocks: [{ id: '1', domain: 'tracker.test', createdAt: 0 }] };
   const state = (page?: string) => ({ scripts, frames: [], inline: [], page });
@@ -160,7 +175,13 @@ describe('badgeCount', () => {
 });
 
 describe('ruleMatches (mirrors the DNR rule for the popup)', () => {
-  const r = (p: Partial<AllowRule>): AllowRule => ({ id: '1', domain: 'cdn.test', scope: 'global', createdAt: 0, ...p });
+  const r = (p: Partial<AllowRule>): AllowRule => ({
+    id: '1',
+    domain: 'cdn.test',
+    scope: 'global',
+    createdAt: 0,
+    ...p,
+  });
   const entry = (url: string, initiator = 'site.test') => ({ url, host: new URL(url).hostname, initiator });
 
   it('domain rule matches the domain and subdomains only', () => {

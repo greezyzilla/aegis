@@ -59,7 +59,11 @@ function LoadedHost({ group, isBlocked, onBlock }: { group: LoadedGroup } & Omit
           <span className="truncate mono">{group.host}</span>
           <span className="count count-neutral">{group.entries.length}</span>
         </button>
-        {group.entries.every(isBlocked) ? <BlockedTag /> : <BlockButton label={group.host} onClick={() => onBlock(group.host)} />}
+        {group.entries.every(isBlocked) ? (
+          <BlockedTag />
+        ) : (
+          <BlockButton label={group.host} onClick={() => onBlock(group.host)} />
+        )}
       </div>
       {open && (
         <ul id={listId} className="files" role="list">
@@ -69,7 +73,11 @@ function LoadedHost({ group, isBlocked, onBlock }: { group: LoadedGroup } & Omit
                 {file}
                 {entries.length > 1 && <span className="muted"> ×{entries.length}</span>}
               </span>
-              {entries.every(isBlocked) ? <BlockedTag /> : <BlockButton label={file} onClick={() => onBlock(group.host, file)} />}
+              {entries.every(isBlocked) ? (
+                <BlockedTag />
+              ) : (
+                <BlockButton label={file} onClick={() => onBlock(group.host, file)} />
+              )}
             </li>
           ))}
         </ul>

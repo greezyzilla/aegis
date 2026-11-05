@@ -6,6 +6,10 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   // Firefox too: the code uses the MV3 `action` API, which MV2 Firefox only has as `browserAction`.
   manifestVersion: 3,
+  // The sources zip is uploaded to AMO when signing: keep the local board and test output out of it.
+  zip: {
+    excludeSources: ['backlog/**', 'coverage/**', 'test-results/**', 'playwright-report/**'],
+  },
   manifest: ({ browser }) => ({
     name: 'Aegis',
     description: 'Blok script di situs yang kamu aktifkan, plus blok global untuk tracker dkk.',

@@ -80,7 +80,6 @@ export async function launch({ firefox, extPath, hosts }) {
 }
 
 async function connect(ff, port, extPath, cleanup) {
-
   let sock = null;
   for (let i = 0; i < 240 && !sock; i++) {
     sock = await new Promise((resolve) => {
@@ -133,7 +132,7 @@ async function connect(ff, port, extPath, cleanup) {
     await send('Addon:Install', { path: extPath, temporary: true });
   } catch (err) {
     sock.destroy();
-    throw new Error(`Firefox refused the extension at ${extPath}: ${err.message}`);
+    throw new Error(`Firefox refused the extension at ${extPath}: ${err.message}`, { cause: err });
   }
 
   const api = {

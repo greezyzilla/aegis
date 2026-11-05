@@ -109,9 +109,7 @@ type SiteList = 'activeSites' | 'inlineSites';
 export function setSiteFlag(list: SiteList, host: string, site: string, on: boolean) {
   return updateSettings((s) => ({
     ...s,
-    [list]: on
-      ? Array.from(new Set([...s[list], site]))
-      : s[list].filter((d) => !hostMatches(host, d)),
+    [list]: on ? Array.from(new Set([...s[list], site])) : s[list].filter((d) => !hostMatches(host, d)),
   }));
 }
 

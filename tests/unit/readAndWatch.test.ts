@@ -14,7 +14,13 @@ function setup() {
     },
     (v) => seen.push(v),
   );
-  return { resolveRead: (v: string) => resolveRead(v), emit: (v: string) => emit(v), seen, cleanup, unwatched: () => unwatched };
+  return {
+    resolveRead: (v: string) => resolveRead(v),
+    emit: (v: string) => emit(v),
+    seen,
+    cleanup,
+    unwatched: () => unwatched,
+  };
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));

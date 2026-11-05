@@ -62,12 +62,33 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
   const [busy, setBusy] = useState(false);
   const [dropped, setDropped] = useState<number | null>(null);
 
-  useEffect(() => readAndWatch(() => listDataItem(id).getValue(), (cb) => listDataItem(id).watch(cb), setData), [id]);
   useEffect(
-    () => readAndWatch(() => storage.getItem<number>(listDroppedKey), (cb) => storage.watch<number>(listDroppedKey, cb), setDropped),
+    () =>
+      readAndWatch(
+        () => listDataItem(id).getValue(),
+        (cb) => listDataItem(id).watch(cb),
+        setData,
+      ),
+    [id],
+  );
+  useEffect(
+    () =>
+      readAndWatch(
+        () => storage.getItem<number>(listDroppedKey),
+        (cb) => storage.watch<number>(listDroppedKey, cb),
+        setDropped,
+      ),
     [],
   );
-  useEffect(() => readAndWatch(() => listErrorItem(id).getValue(), (cb) => listErrorItem(id).watch(cb), setError), [id]);
+  useEffect(
+    () =>
+      readAndWatch(
+        () => listErrorItem(id).getValue(),
+        (cb) => listErrorItem(id).watch(cb),
+        setError,
+      ),
+    [id],
+  );
 
   const unblocks = data?.filters?.filter((f) => f.allow).length ?? 0;
   const paths = (data?.filters?.length ?? 0) - unblocks;
@@ -113,7 +134,8 @@ function PublicList({ id, enabled }: { id: ListId; enabled: boolean }) {
       )}
       {enabled && data && !busy && !!dropped && (
         <p className="muted block" role="note">
-          {fmt.format(dropped)} path tidak dipakai: browser ini membatasi jumlah rule. Yang paling mirip script tetap dipakai.
+          {fmt.format(dropped)} path tidak dipakai: browser ini membatasi jumlah rule. Yang paling mirip script tetap
+          dipakai.
         </p>
       )}
       {error && !busy && (

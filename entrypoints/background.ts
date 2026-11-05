@@ -3,8 +3,22 @@ import { fileFromUrl, hostFromUrl } from '@/lib/domain';
 import { downloadList, isListId, LIST_IDS, listDataItem, listErrorItem, listMatcher, type ListId } from '@/lib/lists';
 import { buildDnrRules, checkRuleCount, type ListRules } from '@/lib/rules';
 import { badgeCount, DEFAULT_SETTINGS, isAutoReload, settingsItem, updateSettings } from '@/lib/settings';
-import { LIST_REFRESH, listDroppedKey, POPUP_PORT, syncErrorKey, tabStateKey, type ListRefreshMessage, type PopupPortMessage } from '@/lib/tabs';
-import { emptyTabState, normalizeTabState, type InlineBlockedMessage, type ScriptEntry, type TabState } from '@/lib/types';
+import {
+  LIST_REFRESH,
+  listDroppedKey,
+  POPUP_PORT,
+  syncErrorKey,
+  tabStateKey,
+  type ListRefreshMessage,
+  type PopupPortMessage,
+} from '@/lib/tabs';
+import {
+  emptyTabState,
+  normalizeTabState,
+  type InlineBlockedMessage,
+  type ScriptEntry,
+  type TabState,
+} from '@/lib/types';
 
 const MAX_SCRIPTS_PER_TAB = 300;
 const MAX_FRAMES_PER_TAB = 50;
@@ -196,14 +210,14 @@ export default defineBackground(() => {
     if (!host) return;
 
     const state = await getState(details.tabId);
-    // Chrome reports the initiator, Firefox only originUrl. The list check needs it on both.
-    const from = hostFromUrl(details.initiator ?? details.originUrl) ?? '';
-    const list = blocked ? (await matchers).find((m) => m.covers(details.url, from))?.id : undefined;
+    // Chrome reports the initiator, Firefox only originUrl (the document that loads the script).
+    const initiator = hostFromUrl(details.initiator ?? details.originUrl) ?? '';
+    const list = blocked ? (await matchers).find((m) => m.covers(details.url, initiator))?.id : undefined;
     const entry: ScriptEntry = {
       url: details.url,
       host,
       file: fileFromUrl(details.url),
-      initiator: hostFromUrl(details.initiator) ?? '',
+      initiator,
       blocked,
       ...(list && { list }),
     };

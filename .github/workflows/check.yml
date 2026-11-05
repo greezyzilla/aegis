@@ -1,4 +1,4 @@
-# Light check on every push: typecheck, unit tests, both builds (~1 min on ubuntu).
+# Light check on every push: typecheck, lint, format, unit tests, both builds (~1 min on ubuntu).
 # The Playwright and Firefox e2e suites stay local: they need browsers and minutes.
 name: check
 on:
@@ -24,5 +24,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run compile
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm test
       - run: npm run build && npm run build:firefox
