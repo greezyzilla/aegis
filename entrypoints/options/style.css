@@ -20,6 +20,10 @@ body {
 .opt .site-host {
   font-size: 22px;
 }
+.site-active .dot-neutral {
+  /* The muted gray disappears on the glass. */
+  background: rgb(255 255 255 / 0.55);
+}
 .site-sub {
   margin: 0;
   max-width: 560px;
