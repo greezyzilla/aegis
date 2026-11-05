@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from './parts';
 
 interface Props {
   id: string;
@@ -35,9 +36,7 @@ export function Section({ id, title, count, aside, collapsible, defaultOpen = tr
               aria-controls={`${id}-body`}
               onClick={() => setOpen(!open)}
             >
-              <span className="chevron" aria-hidden="true">
-                ›
-              </span>
+              <span className="chevron">{Icon.chevron}</span>
               {label}
             </button>
           ) : (

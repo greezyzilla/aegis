@@ -2,7 +2,6 @@ import { browser } from '#imports';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/Switch';
 import { hostFromUrl, hostMatches, normalizeScript, siteOf } from '@/lib/domain';
-import { BlockRules } from '@/components/BlockRules';
 import {
   addBlocks,
   addRules,
@@ -22,7 +21,7 @@ import { useSettings } from '@/lib/useSettings';
 import { ActiveRules } from './ActiveRules';
 import { BlockedList, type BlockedGroup } from './BlockedList';
 import { InlineList, type InlineRow } from './InlineList';
-import { ListHits, type ListHit } from './ListHits';
+import { GlobalBlocks, type ListHit } from './ListHits';
 import { LoadedList, type LoadedGroup } from './LoadedList';
 import { Section } from './Section';
 import { useActiveTab } from './useActiveTab';
@@ -31,6 +30,8 @@ export default function App() {
   const settings = useSettings();
   const { tab, state, syncError } = useActiveTab();
   const [changed, setChanged] = useState(false);
+  // Switched on in this popup: the page on screen loaded before blocking applied.
+  const [justActivated, setJustActivated] = useState(false);
   const port = useRef<ReturnType<typeof popupPort> | null>(null);
 
   useEffect(() => {
@@ -50,12 +51,20 @@ export default function App() {
 
     // Scripts stopped by a global block or a public list are listed there, not as allowable:
     // an allow rule cannot beat them.
-    const groups: BlockedGroup[] = groupByHost(state.scripts.filter((e) => e.blocked && !e.list && !isBlocked(e)));
+    // The site's own hosts first: they are the ones a broken page most likely needs.
+    const isOwn = (host: string) => hostMatches(host, siteOf(pageHost));
+    const ownFirst = <T extends { host: string }>(gs: T[]) =>
+      [...gs].sort((a, b) => Number(isOwn(b.host)) - Number(isOwn(a.host)));
+    const groups: BlockedGroup[] = ownFirst(
+      groupByHost(state.scripts.filter((e) => e.blocked && !e.list && !isBlocked(e))),
+    );
     const listHits: ListHit[] = groupByHost(state.scripts.filter((e) => e.blocked && !!e.list));
-    const loadedGroups: LoadedGroup[] = groupByHost(state.scripts.filter((e) => !e.blocked));
+    const loadedGroups: LoadedGroup[] = ownFirst(groupByHost(state.scripts.filter((e) => !e.blocked)));
     const pageBlocks = settings.blocks.filter((b) => state.scripts.some((e) => blockMatches(b, e)));
     const blockedBy = (b: (typeof settings.blocks)[number]) =>
       state.scripts.filter((e) => e.blocked && blockMatches(b, e)).length;
+    const allowedBy = (r: (typeof settings.rules)[number]) =>
+      state.scripts.filter((e) => !e.blocked && ruleMatches(r, e)).length;
 
     const activeRules = settings.rules.filter((r) =>
       r.scope === 'global'
@@ -83,6 +92,8 @@ export default function App() {
 
     return {
       active,
+      isOwn,
+      allowedBy,
       isAllowed,
       isBlocked,
       groups,
@@ -119,14 +130,8 @@ export default function App() {
     return (
       <main className="popup">
         <header className="site">
-          <div className="site-top">
-            <h1 className="brand">Aegis</h1>
-          </div>
-          {pageHost && (
-            <div className="site-row">
-              <span className="site-host mono truncate">{pageHost}</span>
-            </div>
-          )}
+          <Brand />
+          {pageHost && <p className="site-host">{pageHost}</p>}
         </header>
       </main>
     );
@@ -137,7 +142,7 @@ export default function App() {
       {!view || !site || !pageHost ? (
         <>
           <header className="site">
-            <h1 className="brand">Aegis</h1>
+            <Brand />
           </header>
           {syncError && (
             <p className="notice notice-error" role="alert">
@@ -148,32 +153,29 @@ export default function App() {
         </>
       ) : (
         <>
-          <header className="site" aria-label="Pengaturan situs ini">
+          <header className={`site${view.active ? ' site-active' : ''}`} aria-label="Pengaturan situs ini">
             <div className="site-top">
-              <h1 className="brand">Aegis</h1>
-              <span className="site-summary">
-                {view.active
-                  ? `${view.blocked} keblok · ${view.loaded} lolos`
-                  : `${view.blocked} diblok global · ${view.loaded} jalan`}
-              </span>
-            </div>
-            <div className="site-row">
-              <span className="site-host mono truncate" title={pageHost}>
-                {pageHost}
-              </span>
+              <Brand />
               <Switch
                 checked={view.active}
-                onChange={(v) => act(setSiteFlag('activeSites', pageHost, site, v))}
+                onChange={(v) => {
+                  setJustActivated(v);
+                  act(setSiteFlag('activeSites', pageHost, site, v));
+                }}
                 label={`Aktifkan blokir di ${site}`}
-              >
-                <span className="muted">Aktif di situs ini</span>
-              </Switch>
+              />
             </div>
-            <p className="site-hint muted">
-              {view.active
-                ? 'Semua script keblok, kecuali yang diizinkan.'
-                : 'Script jalan normal, cuma yang diblok global yang keblok.'}
-            </p>
+            <p className="site-host">{pageHost}</p>
+            <div className="flags">
+              <span className="flag">
+                <span className="dot dot-blocked" />
+                {view.active ? `${view.blocked} keblok` : `${view.blocked} diblok global`}
+              </span>
+              <span className="flag">
+                <span className={`dot ${view.active ? 'dot-allowed' : 'dot-neutral'}`} />
+                {view.active ? `${view.loaded} lolos` : `${view.loaded} jalan`}
+              </span>
+            </div>
           </header>
 
           {syncError && (
@@ -184,48 +186,44 @@ export default function App() {
 
           {view.active && (
             <>
-              <Section
-                id="blocked-title"
-                title="Keblok di halaman ini"
-                aside={view.groups.length ? 'Izinkan di' : undefined}
-              >
-                <BlockedList groups={view.groups} isAllowed={view.isAllowed} onAllow={allow} />
+              <Section id="blocked-title" title="Keblok di halaman ini">
+                <BlockedList
+                  groups={view.groups}
+                  isAllowed={view.isAllowed}
+                  isOwn={view.isOwn}
+                  onAllow={allow}
+                  loadedBeforeActive={justActivated}
+                />
               </Section>
 
               <Section id="inline-title" title="Inline script">
                 <InlineList
                   rows={view.inlineRows}
                   disabled={false}
-                  onToggle={(row, on) => act(setSiteFlag('inlineSites', row.host, row.site, on))}
+                  onToggle={(row, allow) => act(setSiteFlag('inlineSites', row.host, row.site, allow))}
                 />
               </Section>
 
               <Section id="rules-title" title="Diizinkan">
-                <ActiveRules rules={view.activeRules} onRemove={(id) => act(removeRule(id))} />
+                <ActiveRules
+                  rules={view.activeRules}
+                  allowedBy={view.allowedBy}
+                  onRemove={(id) => act(removeRule(id))}
+                />
               </Section>
             </>
           )}
 
           {(!view.active || view.pageBlocks.length > 0 || view.listHits.length > 0) && (
             <Section id="global-blocks-title" title="Diblok global">
-              {(view.pageBlocks.length > 0 || view.listHits.length === 0) && (
-                <BlockRules
-                  blocks={view.pageBlocks}
-                  emptyText="Belum ada blok global yang kena di halaman ini."
-                  onRemove={(id) => act(removeBlock(id))}
-                  note={(b) => {
-                    const n = view.blockedBy(b);
-                    return n ? `${n} keblok` : 'berlaku setelah reload';
-                  }}
-                />
-              )}
-              {view.listHits.length > 0 && (
-                <ListHits
-                  hits={view.listHits}
-                  isAllowed={(host) => settings.listAllow.includes(host)}
-                  onAllow={(host) => act(setListAllow(host, true))}
-                />
-              )}
+              <GlobalBlocks
+                blocks={view.pageBlocks}
+                blockedBy={view.blockedBy}
+                onRemove={(id) => act(removeBlock(id))}
+                hits={view.listHits}
+                isAllowed={(host) => settings.listAllow.includes(host)}
+                onAllow={(host) => act(setListAllow(host, true))}
+              />
             </Section>
           )}
 
@@ -237,7 +235,7 @@ export default function App() {
             collapsible={view.active}
             defaultOpen={!view.active}
           >
-            <LoadedList groups={view.loadedGroups} isBlocked={view.isBlocked} onBlock={block} />
+            <LoadedList groups={view.loadedGroups} isBlocked={view.isBlocked} isOwn={view.isOwn} onBlock={block} />
           </Section>
         </>
       )}
@@ -260,11 +258,20 @@ export default function App() {
       )}
 
       <footer className="popup-footer">
-        <button type="button" className="btn btn-ghost" onClick={() => browser.runtime.openOptionsPage()}>
+        <button type="button" className="btn btn-ghost btn-link" onClick={() => browser.runtime.openOptionsPage()}>
           Kelola semua rule →
         </button>
       </footer>
     </main>
+  );
+}
+
+function Brand() {
+  return (
+    <div className="brand">
+      <img src="/icon/32.png" alt="" width={20} height={20} />
+      <h1>Aegis</h1>
+    </div>
   );
 }
 

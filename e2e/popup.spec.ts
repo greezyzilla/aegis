@@ -7,6 +7,12 @@ async function reloadFromPopup(popup: Page, target: Page) {
   await Promise.all([target.waitForEvent('load'), popup.getByRole('button', { name: /^Reload/ }).click()]);
 }
 
+/** "Izinkan di semua situs" lives in the split button's menu. */
+async function allowEverywhere(popup: Page, label: string) {
+  await popup.getByRole('button', { name: `Pilihan lain untuk ${label}` }).click();
+  await popup.getByRole('menuitem', { name: `Izinkan ${label} di semua situs` }).click();
+}
+
 test.describe('popup', () => {
   test('lists blocked scripts grouped by domain, with a badge count', async ({
     setSettings,
@@ -42,7 +48,7 @@ test.describe('popup', () => {
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await allowEverywhere(popup, 'cdn.test');
     await expect
       .poll(async () => (await getSettings()).rules.map((r) => [r.domain, r.scope, r.script]))
       .toEqual([['cdn.test', 'global', undefined]]);
@@ -56,7 +62,7 @@ test.describe('popup', () => {
     await expect(
       popup.getByRole('region', { name: /Keblok di halaman ini/ }).getByRole('button', { name: /^cdn\.test \d/ }),
     ).toHaveCount(0);
-    await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toContainText('Global');
+    await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toContainText('semua situs');
   });
 
   test('"Situs ini" on a single file allows only that file, only on this site', async ({
@@ -76,7 +82,9 @@ test.describe('popup', () => {
       .poll(async () => (await getSettings()).rules.map((r) => [r.domain, r.scope, r.script]))
       .toEqual([['cdn.test', 'shop.test', 'b.js']]);
     await expect(popup.locator('.file', { hasText: 'b.js' })).toContainText('diizinkan');
-    await expect(popup.locator('.file', { hasText: 'a.js' }).getByRole('button', { name: 'Situs ini' })).toBeVisible();
+    await expect(
+      popup.locator('.file', { hasText: 'a.js' }).getByRole('button', { name: 'Izinkan a.js di situs ini' }),
+    ).toBeVisible();
     await reloadFromPopup(popup, site);
 
     expect((await ran(site)).loaded).toEqual(['cdn.test/lib/b.js']);
@@ -94,7 +102,7 @@ test.describe('popup', () => {
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await popup.getByRole('switch', { name: 'Izinkan inline script di shop.test' }).click();
+    await popup.getByRole('switch', { name: 'Blok inline script di shop.test' }).click();
     await expect.poll(async () => (await getSettings()).inlineSites).toEqual(['shop.test']);
     await reloadFromPopup(popup, site);
     expect(await ran(site)).toEqual({ inline: true, loaded: [] });
@@ -102,7 +110,7 @@ test.describe('popup', () => {
     const active = popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' });
     await active.click();
     await expect(active).toHaveAttribute('aria-checked', 'false');
-    await expect(popup.getByRole('switch', { name: 'Izinkan inline script di shop.test' })).toHaveCount(0);
+    await expect(popup.getByRole('switch', { name: 'Blok inline script di shop.test' })).toHaveCount(0);
     await expect.poll(async () => (await getSettings()).activeSites).toEqual([]);
     await reloadFromPopup(popup, site);
     expect((await ran(site)).loaded).toHaveLength(5);
@@ -154,7 +162,7 @@ test.describe('popup', () => {
       .map((s) => s.replace('shop.test', 'www.shop.test'))
       .filter((s) => s !== 'other.test/d.js');
     expect((await ran(site)).loaded).toEqual(withoutOther.sort());
-    await expect(popup.locator('.block-rule', { hasText: 'other.test' })).toContainText('1 keblok');
+    await expect(popup.locator('.block-rule', { hasText: 'other.test' }).locator('.count')).toHaveText('1');
 
     await popup.getByRole('button', { name: 'Hapus blok other.test' }).click();
     await reloadFromPopup(popup, site);
@@ -172,7 +180,7 @@ test.describe('popup', () => {
 
     await expect(popup.getByRole('button', { name: /^cdn\.test 2$/ })).toBeVisible();
     await expect(popup.getByRole('button', { name: /^other\.test \d/ })).toHaveCount(0);
-    await expect(popup.locator('.block-rule', { hasText: 'other.test' })).toContainText('1 keblok');
+    await expect(popup.locator('.block-rule', { hasText: 'other.test' }).locator('.count')).toHaveText('1');
   });
 
   test('non-http pages show a notice instead of site controls', async ({ setSettings, context, openPopup }) => {
@@ -196,7 +204,7 @@ test.describe('popup', () => {
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await allowEverywhere(popup, 'cdn.test');
     await expect.poll(async () => (await getSettings()).rules.length).toBe(1);
     await Promise.all([site.waitForEvent('load'), popup.close()]);
 
@@ -218,7 +226,7 @@ test.describe('popup', () => {
 
     await setSettings({ ...DEFAULTS, autoReload: false });
     const popup = await openPopup(site);
-    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await allowEverywhere(popup, 'cdn.test');
     await expect.poll(async () => (await getSettings()).rules.length).toBe(1);
     await popup.close();
 
@@ -271,7 +279,7 @@ test.describe('popup', () => {
     await reloadFromPopup(popup, site);
     // The block covers subdomains too, like every domain rule.
     expect((await ran(site)).loaded).toEqual([]);
-    await expect(popup.locator('.block-rule', { hasText: 'cdn.test' })).toContainText('3 keblok');
+    await expect(popup.locator('.block-rule', { hasText: 'cdn.test' }).locator('.count')).toHaveText('3');
     // Still listed as allowed: the allow rule exists, the block simply wins.
     await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toBeVisible();
   });
@@ -328,7 +336,7 @@ test.describe('popup', () => {
     const tabId = await tabIdOf(site);
     const popup = await openPopup(site);
 
-    await expect(popup.locator('.block-rule', { hasText: 'cdn.test' })).toContainText('3 keblok');
+    await expect(popup.locator('.block-rule', { hasText: 'cdn.test' }).locator('.count')).toHaveText('3');
     await expect.poll(() => sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)).toBe('3');
   });
 
@@ -378,7 +386,7 @@ test.describe('popup', () => {
     let loads = 0;
     site.on('load', () => loads++);
 
-    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await allowEverywhere(popup, 'cdn.test');
     await reloadFromPopup(popup, site);
     expect(loads).toBe(1);
     await popup.close();
@@ -391,9 +399,9 @@ test.describe('popup', () => {
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await allowEverywhere(popup, 'cdn.test');
     await reloadFromPopup(popup, site);
-    await popup.getByRole('button', { name: 'Izinkan other.test di semua situs' }).click();
+    await allowEverywhere(popup, 'other.test');
     await expect(popup.getByText('Tab di-reload saat ditutup.')).toBeVisible();
     await Promise.all([site.waitForEvent('load'), popup.close()]);
   });
@@ -401,11 +409,11 @@ test.describe('popup', () => {
   test('header sums up the page like the badge, per mode', async ({ setSettings, visit, openPopup }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
     const active = await openPopup(await visit('www.shop.test'));
-    await expect(active.locator('.site-summary')).toHaveText('2 keblok · 3 lolos');
+    await expect(active.locator('.flag')).toHaveText(['2 keblok', '3 lolos']);
 
     await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('other.test')] });
     const inactive = await openPopup(await visit('site-a.test'));
-    await expect(inactive.locator('.site-summary')).toHaveText('1 diblok global · 4 jalan');
+    await expect(inactive.locator('.flag')).toHaveText(['1 diblok global', '4 jalan']);
   });
 
   test('on an active site "Script jalan" starts folded and "Diblok global" hides when empty', async ({
@@ -422,7 +430,7 @@ test.describe('popup', () => {
     await toggle.click();
     await expect(popup.getByRole('button', { name: 'Blok cdn.test di semua situs' })).toBeVisible();
     await expect(popup.getByRole('heading', { name: 'Diblok global' })).toHaveCount(0);
-    await expect(popup.getByText('Izinkan di')).toBeVisible();
+    await expect(popup.locator('.split').first()).toBeVisible();
   });
 
   test('with auto-reload off the notice asks for a manual reload', async ({ setSettings, visit, openPopup }) => {
@@ -430,7 +438,7 @@ test.describe('popup', () => {
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await allowEverywhere(popup, 'cdn.test');
     await expect(popup.getByText('Perubahan berlaku setelah reload.')).toBeVisible();
     await Promise.all([site.waitForEvent('load'), popup.getByRole('button', { name: 'Reload', exact: true }).click()]);
   });
@@ -439,7 +447,7 @@ test.describe('popup', () => {
     await setSettings(DEFAULTS);
     const popup = await openPopup(await visit('stream.test', '/embed'));
     await popup.setViewportSize({ width: 360, height: 600 });
-    await popup.getByRole('button', { name: 'Izinkan cdn.test di semua situs' }).click();
+    await allowEverywhere(popup, 'cdn.test');
     const notice = popup.locator('.reload');
     await popup.locator('.popup').evaluate((el) => el.scrollTo(0, 0));
     const box = await notice.boundingBox();
@@ -470,7 +478,7 @@ test.describe('popup', () => {
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.getByRole('heading', { name: 'Aegis' })).toBeVisible();
     await expect(popup.locator('.site-host')).toHaveText('www.shop.test');
-    await expect(popup.locator('.site-summary')).toHaveCount(0);
+    await expect(popup.locator('.flags')).toHaveCount(0);
   });
 
   test('recording scripts does not read storage for the badge', async ({ setSettings, visit, sw, tabIdOf }) => {
