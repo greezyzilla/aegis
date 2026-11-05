@@ -68,7 +68,7 @@ The E2E suite maps every `*.test` host to a local server, so it can check per-do
 
 [release-please](https://github.com/googleapis/release-please) owns the version and `CHANGELOG.md`: never edit them by hand. Versions follow semver and live in `package.json`; WXT copies them into both manifests. It keeps one open Release PR, `chore(main): release X.Y.Z`, updated on every merge to `main` with the next version and changelog computed from the Conventional Commit messages (`fix` → patch, `feat` → minor, breaking changes → minor while below 1.0).
 
-Merging that PR tags `vX.Y.Z`, publishes the GitHub Release, and attaches `aegis-X.Y.Z-chrome.zip` and `aegis-X.Y.Z-firefox.zip`. When the repo has the `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` secrets, the signed Firefox `.xpi` is attached too.
+Merging that PR tags `vX.Y.Z`, publishes the GitHub Release, and attaches `aegis-X.Y.Z-chrome.zip` and `aegis-X.Y.Z-firefox.zip`. When the repo has the `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` secrets, the signed `aegis-X.Y.Z-firefox.xpi` is attached too.
 
 The extension is not published to the stores. Firefox release builds only keep signed add-ons installed, so the Firefox build is signed on AMO as **unlisted**: never listed in the store, signed automatically, and installable for good from the `.xpi`. To sign locally instead, put the AMO API credentials (addons.mozilla.org → Developer Hub → Manage API Keys) in `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` and run `npm run sign:firefox` (output in `dist/signed/`). Signing uploads the sources zip with the build because the bundle is minified; `wxt.config.ts` keeps `backlog/` and test output out of that zip.
 

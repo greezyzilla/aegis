@@ -50,4 +50,8 @@ jobs:
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
-        run: npm run sign:firefox && gh release upload "$TAG" dist/signed/*.xpi
+        # AMO names the .xpi after its own file id: give it the same name as the zips.
+        run: |
+          npm run sign:firefox
+          mv dist/signed/*.xpi "dist/aegis-${TAG#v}-firefox.xpi"
+          gh release upload "$TAG" "dist/aegis-${TAG#v}-firefox.xpi"
