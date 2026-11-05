@@ -12,7 +12,7 @@
   </p>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/popup-dark.png">
-    <img src="docs/images/popup-light.png" width="360" alt="The Aegis popup on a news site: eight scripts blocked, the site's own scripts listed first, one script allowed by a rule">
+    <img src="docs/images/popup-light.png" width="360" alt="The Aegis popup on theverge.com: 14 scripts from 13 domains blocked, the site's own scripts allowed by a rule, its inline scripts blocked">
   </picture>
 </div>
 
@@ -40,9 +40,15 @@ On a site that is not active, the popup lists the scripts that ran. **Block** bl
 
 The options page holds everything else: allow rules, global blocks, active and inline-allowed sites, EasyPrivacy (downloaded from easylist.to when you turn it on, refreshed weekly) and a JSON export/import of your settings. If EasyPrivacy breaks a site, allow the host from the popup.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/options-dark.png">
+  <img src="docs/images/options-light.png" width="720" alt="The Aegis options page after turning on theverge.com and techcrunch.com from the popup: one allow rule for each site's own scripts, EasyPrivacy on">
+</picture>
+
+The interface is in English. Under Settings in the options page you can switch it to Bahasa Indonesia, or let it follow the browser's language.
+
 ## Limitations
 
-- The interface is in English and Indonesian. It follows the browser's language unless you pick one under Settings in the options page.
 - It blocks scripts and nothing else: images, iframes and other requests load as usual.
 - Firefox allows 5,000 dynamic blocking rules, Chrome 30,000. EasyPrivacy needs about 8,500, so on Firefox the least script-like path entries are left out. The options page shows how many.
 

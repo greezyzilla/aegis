@@ -64,6 +64,8 @@ npm run test:firefox   # builds for Firefox, then runs the same scenarios in rea
 
 To try a build by hand, load `dist/chrome-mv3` from `brave://extensions` → Developer mode → **Load unpacked**, or load `dist/firefox-mv3/manifest.json` from `about:debugging` → This Firefox → **Load Temporary Add-on** (gone after a restart).
 
+UI text lives in `lib/i18n`: `en.ts` is the source and the default, `id.ts` must have the same keys (the type checks it). Add a string to both. The browser suites read the English UI; their test browser is Indonesian, which shows the default does not follow it, and `e2e/indonesian.spec.ts` picks Indonesian and fails on any English word left on screen.
+
 The E2E suite maps every `*.test` host to a local server, so it can check per-domain and per-site rules across "different" sites. The popup is opened as a tab whose `tabs.query` points at the page under test, since Playwright cannot click the toolbar icon.
 
 `test:firefox` needs Firefox 140+ installed (or `FIREFOX_BIN` pointing at its binary) and exits with an error if it is missing. Playwright cannot load extensions in Firefox, so `e2e-firefox/` drives Firefox through Marionette with a throwaway profile, with no extra dependencies. It covers active and inactive sites, allow rules (global, per site, per script), inline sites, iframes, global blocks, a 47k-domain public list, the popup's script log and badge, and the weekly alarm. It makes no outside network requests unless `AEGIS_FIREFOX_NETWORK=1`, which also checks a real EasyPrivacy download.
