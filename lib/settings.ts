@@ -103,7 +103,7 @@ export function setAutoReload(autoReload: boolean) {
   return updateSettings((s) => ({ ...s, autoReload }));
 }
 
-/** `undefined` goes back to the browser's language. */
+/** `undefined` goes back to the default, English. */
 export function setLangPref(lang: Settings['lang']) {
   return updateSettings(({ lang: _old, ...s }) => (lang ? { ...s, lang } : s));
 }

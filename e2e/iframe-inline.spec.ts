@@ -46,7 +46,7 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
 
     const pageRow = popup.locator('.inline-row', { hasText: 'stream.test' });
     const frameRow = popup.locator('.inline-row', { hasText: 'player.test' });
-    await expect(pageRow).toContainText('halaman ini');
+    await expect(pageRow).toContainText('this page');
     await expect(pageRow.locator('.count')).toHaveText('1');
     await expect(frameRow).toContainText('iframe');
     await expect(frameRow.locator('.count')).toHaveText('2');
@@ -64,7 +64,7 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     expect(await ranIn(playerFrame(page))).toEqual({ inline: false, loaded: ['cdn.test/lib/a.js'] });
     const popup = await openPopup(page);
 
-    await popup.getByRole('switch', { name: 'Blok inline script di player.test' }).click();
+    await popup.getByRole('switch', { name: 'Block inline scripts on player.test' }).click();
     await expect.poll(async () => (await getSettings()).inlineSites).toEqual(['player.test']);
     await reloadFromPopup(popup, page);
 
@@ -82,7 +82,7 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     expect((await ranIn(playerFrame(page))).inline).toBe(true);
     const popup = await openPopup(page);
 
-    const toggle = popup.getByRole('switch', { name: 'Blok inline script di player.test' });
+    const toggle = popup.getByRole('switch', { name: 'Block inline scripts on player.test' });
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
     await toggle.click();
     await reloadFromPopup(popup, page);
@@ -120,7 +120,7 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
   test('an inactive page shows no inline controls, even with iframes', async ({ setSettings, visit, openPopup }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const popup = await openPopup(await visit('stream.test', '/embed'));
-    await expect(popup.getByRole('heading', { name: 'Script jalan' })).toBeVisible();
+    await expect(popup.getByRole('heading', { name: 'Scripts that ran' })).toBeVisible();
     await expect(popup.locator('.inline-row')).toHaveCount(0);
   });
 
@@ -135,17 +135,17 @@ test.describe('inline scripts inside a third-party iframe (player case)', () => 
     await setSettings(DEFAULTS);
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
-    const input = page.getByLabel('Tambah situs inline');
+    const input = page.getByLabel('Add an inline site');
     const card = input.locator('xpath=ancestor::section[1]');
 
     await input.fill('bad site');
-    await card.getByRole('button', { name: 'Tambah' }).click();
-    await expect(card.getByText('Situs nggak valid')).toBeVisible();
+    await card.getByRole('button', { name: 'Add' }).click();
+    await expect(card.getByText('Invalid site')).toBeVisible();
     expect((await getSettings()).inlineSites).toEqual([]);
 
     await input.fill('https://WWW.player.test/embed');
-    await card.getByRole('button', { name: 'Tambah' }).click();
-    await expect(card.getByRole('button', { name: 'Hapus player.test' })).toBeVisible();
+    await card.getByRole('button', { name: 'Add' }).click();
+    await expect(card.getByRole('button', { name: 'Remove player.test' })).toBeVisible();
     expect((await getSettings()).inlineSites).toEqual(['player.test']);
 
     const embed = await visit('stream.test', '/embed');

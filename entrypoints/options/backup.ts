@@ -17,8 +17,8 @@ interface Backup {
   inlineSites: string[];
   lists: string[];
   listAllow: string[];
-  /** Missing: the browser's language. */
-  lang?: 'id' | 'en';
+  /** Missing: English. */
+  lang?: 'id' | 'en' | 'auto';
 }
 
 export interface ImportResult {
@@ -89,7 +89,9 @@ export async function importSettings(file: File): Promise<ImportResult> {
       inlineSites: Array.from(new Set([...s.inlineSites, ...inline])),
       listAllow: Array.from(new Set([...s.listAllow, ...listAllow])),
       // Merged like the rest: a language already picked here wins over the file's.
-      ...(s.lang === undefined && (data.lang === 'id' || data.lang === 'en') ? { lang: data.lang } : {}),
+      ...(s.lang === undefined && (data.lang === 'id' || data.lang === 'en' || data.lang === 'auto')
+        ? { lang: data.lang }
+        : {}),
     };
   });
   return { count: rules.length + blocks.length, listsToEnable };

@@ -95,7 +95,7 @@ export const block = (domain: string, script?: string): BlockRule => ({
 });
 
 interface Fixtures {
-  /** UI language of the test browser: the suite reads the Indonesian UI; english.spec.ts switches to English. */
+  /** Language of the test browser. Indonesian, so the suite shows the UI stays English unless picked. */
   uiLang: 'id' | 'en';
   context: BrowserContext;
   sw: Worker;

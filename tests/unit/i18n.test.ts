@@ -3,7 +3,7 @@ import * as i18n from '@/lib/i18n';
 import { langOf, messagesFor } from '@/lib/i18n';
 
 describe('i18n', () => {
-  it('uses Indonesian only for an Indonesian browser', () => {
+  it("'auto' uses Indonesian only for an Indonesian browser", () => {
     expect(langOf('id')).toBe('id');
     expect(langOf('id-ID')).toBe('id');
     expect(langOf('en-US')).toBe('en');
@@ -34,13 +34,15 @@ describe('i18n', () => {
     expect(id.pathsDropped(1200)).toMatch(/^1\.200 path tidak dipakai/);
   });
 
-  it('applyLang switches the live dictionary, and back to the browser language', () => {
-    const browserLang = i18n.lang;
-    const other = browserLang === 'id' ? 'en' : 'id';
-    expect(i18n.applyLang(other)).toBe(true);
-    expect([i18n.lang, i18n.t.remove]).toEqual([other, messagesFor(other).remove]);
-    expect(i18n.applyLang(other)).toBe(false);
+  it('is English until a language is picked, and follows the browser only when asked', () => {
+    expect(i18n.lang).toBe('en');
+    expect(i18n.resolveLang(undefined)).toBe('en');
+    expect(i18n.resolveLang('id')).toBe('id');
+    expect(i18n.resolveLang('auto')).toBe(langOf(globalThis.navigator?.language));
+    expect(i18n.applyLang('id')).toBe(true);
+    expect([i18n.lang, i18n.t.remove]).toEqual(['id', 'Hapus']);
+    expect(i18n.applyLang('id')).toBe(false);
     expect(i18n.applyLang(undefined)).toBe(true);
-    expect([i18n.lang, i18n.t.remove]).toEqual([browserLang, messagesFor(browserLang).remove]);
+    expect([i18n.lang, i18n.t.remove]).toEqual(['en', 'Remove']);
   });
 });

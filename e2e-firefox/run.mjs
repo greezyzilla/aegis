@@ -317,7 +317,7 @@ try {
   await expectEventually(
     'options renders every section',
     () => ff.run(() => [...document.querySelectorAll('.section-title')].map((h) => h.firstChild.textContent.trim())),
-    ['Situs aktif', 'Rule izin', 'Blok global', 'Daftar publik', 'Inline script diizinkan', 'Pengaturan', 'Backup'],
+    ['Active sites', 'Allow rules', 'Global blocks', 'Public lists', 'Inline scripts allowed', 'Settings', 'Backup'],
   );
 } catch (e) {
   failures.push(`crashed: ${e.message}`);

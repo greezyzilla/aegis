@@ -7,10 +7,10 @@ async function reloadFromPopup(popup: Page, target: Page) {
   await Promise.all([target.waitForEvent('load'), popup.getByRole('button', { name: /^Reload/ }).click()]);
 }
 
-/** "Izinkan di semua situs" lives in the split button's menu. */
+/** "Allow on every site" lives in the split button's menu. */
 async function allowEverywhere(popup: Page, label: string) {
-  await popup.getByRole('button', { name: `Pilihan lain untuk ${label}` }).click();
-  await popup.getByRole('menuitem', { name: `Izinkan ${label} di semua situs` }).click();
+  await popup.getByRole('button', { name: `More options for ${label}` }).click();
+  await popup.getByRole('menuitem', { name: `Allow ${label} on every site` }).click();
 }
 
 test.describe('popup', () => {
@@ -60,12 +60,12 @@ test.describe('popup', () => {
     expect((await ran(await visit('elsewhere.test'))).loaded).toEqual(cdn);
     // Still listed under "Script jalan", but no longer as blocked.
     await expect(
-      popup.getByRole('region', { name: /Keblok di halaman ini/ }).getByRole('button', { name: /^cdn\.test \d/ }),
+      popup.getByRole('region', { name: /Blocked on this page/ }).getByRole('button', { name: /^cdn\.test \d/ }),
     ).toHaveCount(0);
-    await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toContainText('semua situs');
+    await expect(popup.locator('.rule', { hasText: 'cdn.test' })).toContainText('every site');
   });
 
-  test('"Situs ini" on a single file allows only that file, only on this site', async ({
+  test('"Allow" on a single file allows only that file, only on this site', async ({
     setSettings,
     visit,
     openPopup,
@@ -77,13 +77,13 @@ test.describe('popup', () => {
     const popup = await openPopup(site);
 
     await popup.getByRole('button', { name: /^cdn\.test 2$/ }).click();
-    await popup.getByRole('button', { name: 'Izinkan b.js di situs ini' }).click();
+    await popup.getByRole('button', { name: 'Allow b.js on this site' }).click();
     await expect
       .poll(async () => (await getSettings()).rules.map((r) => [r.domain, r.scope, r.script]))
       .toEqual([['cdn.test', 'shop.test', 'b.js']]);
-    await expect(popup.locator('.file', { hasText: 'b.js' })).toContainText('diizinkan');
+    await expect(popup.locator('.file', { hasText: 'b.js' })).toContainText('allowed');
     await expect(
-      popup.locator('.file', { hasText: 'a.js' }).getByRole('button', { name: 'Izinkan a.js di situs ini' }),
+      popup.locator('.file', { hasText: 'a.js' }).getByRole('button', { name: 'Allow a.js on this site' }),
     ).toBeVisible();
     await reloadFromPopup(popup, site);
 
@@ -102,15 +102,15 @@ test.describe('popup', () => {
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await popup.getByRole('switch', { name: 'Blok inline script di shop.test' }).click();
+    await popup.getByRole('switch', { name: 'Block inline scripts on shop.test' }).click();
     await expect.poll(async () => (await getSettings()).inlineSites).toEqual(['shop.test']);
     await reloadFromPopup(popup, site);
     expect(await ran(site)).toEqual({ inline: true, loaded: [] });
 
-    const active = popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' });
+    const active = popup.getByRole('switch', { name: 'Turn on blocking on shop.test' });
     await active.click();
     await expect(active).toHaveAttribute('aria-checked', 'false');
-    await expect(popup.getByRole('switch', { name: 'Blok inline script di shop.test' })).toHaveCount(0);
+    await expect(popup.getByRole('switch', { name: 'Block inline scripts on shop.test' })).toHaveCount(0);
     await expect.poll(async () => (await getSettings()).activeSites).toEqual([]);
     await reloadFromPopup(popup, site);
     expect((await ran(site)).loaded).toHaveLength(5);
@@ -121,19 +121,19 @@ test.describe('popup', () => {
     expect(await ran(site)).toEqual({ inline: true, loaded: [] });
   });
 
-  test('removing a rule from "Diizinkan" blocks again after reload', async ({ setSettings, visit, openPopup, ran }) => {
+  test('removing a rule from "Allowed" blocks again after reload', async ({ setSettings, visit, openPopup, ran }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
     const site = await visit('www.shop.test');
     expect((await ran(site)).loaded).toHaveLength(3);
     const popup = await openPopup(site);
 
-    await popup.getByRole('button', { name: 'Hapus rule cdn.test' }).click();
-    await expect(popup.getByText('Belum ada rule yang berlaku di sini.')).toBeVisible();
+    await popup.getByRole('button', { name: 'Remove rule cdn.test' }).click();
+    await expect(popup.getByText('No rules apply here yet.')).toBeVisible();
     await reloadFromPopup(popup, site);
     expect((await ran(site)).loaded).toEqual([]);
   });
 
-  test('inactive site: only "Script jalan", and a script can be blocked on every site', async ({
+  test('inactive site: only "Scripts that ran", and a script can be blocked on every site', async ({
     setSettings,
     visit,
     openPopup,
@@ -144,18 +144,18 @@ test.describe('popup', () => {
     const site = await visit('www.shop.test');
     const popup = await openPopup(site);
 
-    await expect(popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' })).toHaveAttribute(
+    await expect(popup.getByRole('switch', { name: 'Turn on blocking on shop.test' })).toHaveAttribute(
       'aria-checked',
       'false',
     );
-    await expect(popup.getByRole('heading', { name: /Keblok di halaman ini/ })).toHaveCount(0);
-    await expect(popup.getByText('Belum ada blok global yang kena di halaman ini.')).toBeVisible();
+    await expect(popup.getByRole('heading', { name: /Blocked on this page/ })).toHaveCount(0);
+    await expect(popup.getByText('No global blocks hit this page yet.')).toBeVisible();
 
-    await popup.getByRole('button', { name: 'Blok other.test di semua situs' }).click();
+    await popup.getByRole('button', { name: 'Block other.test on every site' }).click();
     await expect
       .poll(async () => (await getSettings()).blocks.map((b) => [b.domain, b.script]))
       .toEqual([['other.test', undefined]]);
-    await expect(popup.locator('.loaded-host', { hasText: 'other.test' })).toContainText('diblok');
+    await expect(popup.locator('.loaded-host', { hasText: 'other.test' })).toContainText('blocked');
     await reloadFromPopup(popup, site);
 
     const withoutOther = ALL_SCRIPTS('shop.test')
@@ -164,7 +164,7 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toEqual(withoutOther.sort());
     await expect(popup.locator('.block-rule', { hasText: 'other.test' }).locator('.count')).toHaveText('1');
 
-    await popup.getByRole('button', { name: 'Hapus blok other.test' }).click();
+    await popup.getByRole('button', { name: 'Remove block other.test' }).click();
     await reloadFromPopup(popup, site);
     expect((await ran(site)).loaded).toHaveLength(5);
   });
@@ -190,7 +190,7 @@ test.describe('popup', () => {
     await blank.goto('data:text/html,<p>hi</p>');
     const popup = await openPopup(blank).catch(() => null);
     test.skip(!popup, 'data: tab not visible to tabs.query');
-    await expect(popup!.getByText(/nggak bisa diatur/)).toBeVisible();
+    await expect(popup!.getByText(/can't be managed/)).toBeVisible();
   });
 
   test('closing the popup after a change reloads the tab once', async ({
@@ -234,7 +234,7 @@ test.describe('popup', () => {
     expect(loads).toBe(0);
   });
 
-  test('a single file can be blocked globally from "Script jalan"', async ({
+  test('a single file can be blocked globally from "Scripts that ran"', async ({
     setSettings,
     visit,
     openPopup,
@@ -246,17 +246,17 @@ test.describe('popup', () => {
     const popup = await openPopup(site);
 
     await popup.getByRole('button', { name: /^cdn\.test 2$/ }).click();
-    await popup.getByRole('button', { name: 'Blok b.js di semua situs' }).click();
+    await popup.getByRole('button', { name: 'Block b.js on every site' }).click();
     await expect
       .poll(async () => (await getSettings()).blocks.map((b) => [b.domain, b.script]))
       .toEqual([['cdn.test', 'b.js']]);
-    await expect(popup.locator('.loaded-host .file', { hasText: 'b.js' })).toContainText('diblok');
+    await expect(popup.locator('.loaded-host .file', { hasText: 'b.js' })).toContainText('blocked');
     await expect(
       popup
         .locator('.loaded-host .file', { hasText: 'a.js' })
-        .getByRole('button', { name: 'Blok a.js di semua situs' }),
+        .getByRole('button', { name: 'Block a.js on every site' }),
     ).toBeVisible();
-    await expect(popup.locator('.block-rule', { hasText: 'cdn.test' })).toContainText('berlaku setelah reload');
+    await expect(popup.locator('.block-rule', { hasText: 'cdn.test' })).toContainText('applies after a reload');
     await reloadFromPopup(popup, site);
 
     expect((await ran(site)).loaded).toEqual(ALL_SCRIPTS('site-a.test').filter((s) => s !== 'cdn.test/lib/b.js'));
@@ -274,8 +274,8 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toHaveLength(3);
     const popup = await openPopup(site);
 
-    await popup.getByRole('button', { name: /^Script jalan/ }).click();
-    await popup.getByRole('button', { name: 'Blok cdn.test di semua situs' }).click();
+    await popup.getByRole('button', { name: /^Scripts that ran/ }).click();
+    await popup.getByRole('button', { name: 'Block cdn.test on every site' }).click();
     await reloadFromPopup(popup, site);
     // The block covers subdomains too, like every domain rule.
     expect((await ran(site)).loaded).toEqual([]);
@@ -292,11 +292,11 @@ test.describe('popup', () => {
   }) => {
     await setSettings({ ...DEFAULTS, activeSites: [] });
     const blog = await openPopup(await visit('blog.shop.test'));
-    await blog.getByRole('switch', { name: 'Aktifkan blokir di blog.shop.test' }).click();
+    await blog.getByRole('switch', { name: 'Turn on blocking on blog.shop.test' }).click();
     await expect.poll(async () => (await getSettings()).activeSites).toEqual(['blog.shop.test']);
 
     const www = await openPopup(await visit('www.news.test'));
-    await www.getByRole('switch', { name: 'Aktifkan blokir di news.test' }).click();
+    await www.getByRole('switch', { name: 'Turn on blocking on news.test' }).click();
     await expect.poll(async () => (await getSettings()).activeSites).toEqual(['blog.shop.test', 'news.test']);
   });
 
@@ -308,7 +308,7 @@ test.describe('popup', () => {
   }) => {
     await setSettings({ ...DEFAULTS, activeSites: ['shop.test', 'other-site.test'] });
     const popup = await openPopup(await visit('blog.shop.test'));
-    const toggle = popup.getByRole('switch', { name: 'Aktifkan blokir di blog.shop.test' });
+    const toggle = popup.getByRole('switch', { name: 'Turn on blocking on blog.shop.test' });
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await toggle.click();
     await expect.poll(async () => (await getSettings()).activeSites).toEqual(['other-site.test']);
@@ -369,8 +369,8 @@ test.describe('popup', () => {
     expect((await ran(site)).loaded).toHaveLength(5);
     const popup = await openPopup(site);
 
-    await popup.getByRole('switch', { name: 'Aktifkan blokir di shop.test' }).click();
-    await expect(popup.getByRole('heading', { name: /Keblok di halaman ini/ })).toBeVisible();
+    await popup.getByRole('switch', { name: 'Turn on blocking on shop.test' }).click();
+    await expect(popup.getByRole('heading', { name: /Blocked on this page/ })).toBeVisible();
     await Promise.all([site.waitForEvent('load'), popup.close()]);
     expect(await ran(site)).toEqual({ inline: false, loaded: [] });
   });
@@ -402,21 +402,21 @@ test.describe('popup', () => {
     await allowEverywhere(popup, 'cdn.test');
     await reloadFromPopup(popup, site);
     await allowEverywhere(popup, 'other.test');
-    await expect(popup.getByText('Tab di-reload saat ditutup.')).toBeVisible();
+    await expect(popup.getByText('The tab reloads when the popup closes.')).toBeVisible();
     await Promise.all([site.waitForEvent('load'), popup.close()]);
   });
 
   test('header sums up the page like the badge, per mode', async ({ setSettings, visit, openPopup }) => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
     const active = await openPopup(await visit('www.shop.test'));
-    await expect(active.locator('.flag')).toHaveText(['2 keblok', '3 lolos']);
+    await expect(active.locator('.flag')).toHaveText(['2 blocked', '3 allowed']);
 
     await setSettings({ ...DEFAULTS, activeSites: [], blocks: [block('other.test')] });
     const inactive = await openPopup(await visit('site-a.test'));
-    await expect(inactive.locator('.flag')).toHaveText(['1 diblok global', '4 jalan']);
+    await expect(inactive.locator('.flag')).toHaveText(['1 blocked globally', '4 ran']);
   });
 
-  test('on an active site "Script jalan" starts folded and "Diblok global" hides when empty', async ({
+  test('on an active site "Scripts that ran" starts folded and "Blocked globally" hides when empty', async ({
     setSettings,
     visit,
     openPopup,
@@ -424,12 +424,12 @@ test.describe('popup', () => {
     await setSettings({ ...DEFAULTS, rules: [rule('cdn.test')] });
     const popup = await openPopup(await visit('www.shop.test'));
 
-    const toggle = popup.getByRole('button', { name: /^Script jalan 3$/ });
+    const toggle = popup.getByRole('button', { name: /^Scripts that ran 3$/ });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(popup.getByRole('button', { name: 'Blok cdn.test di semua situs' })).toHaveCount(0);
+    await expect(popup.getByRole('button', { name: 'Block cdn.test on every site' })).toHaveCount(0);
     await toggle.click();
-    await expect(popup.getByRole('button', { name: 'Blok cdn.test di semua situs' })).toBeVisible();
-    await expect(popup.getByRole('heading', { name: 'Diblok global' })).toHaveCount(0);
+    await expect(popup.getByRole('button', { name: 'Block cdn.test on every site' })).toBeVisible();
+    await expect(popup.getByRole('heading', { name: 'Blocked globally' })).toHaveCount(0);
     await expect(popup.locator('.split').first()).toBeVisible();
   });
 
@@ -439,7 +439,7 @@ test.describe('popup', () => {
     const popup = await openPopup(site);
 
     await allowEverywhere(popup, 'cdn.test');
-    await expect(popup.getByText('Perubahan berlaku setelah reload.')).toBeVisible();
+    await expect(popup.getByText('Changes apply after a reload.')).toBeVisible();
     await Promise.all([site.waitForEvent('load'), popup.getByRole('button', { name: 'Reload', exact: true }).click()]);
   });
 

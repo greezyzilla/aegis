@@ -80,7 +80,7 @@ test.describe('public lists', () => {
     expect((await ran(await visit('site-b.test'))).loaded).toEqual(['cdn.test/lib/a.js', 'sub.cdn.test/c.js']);
   });
 
-  test('popup names the list, and "Izinkan" unblocks that host from it', async ({
+  test('popup names the list, and "Allow" unblocks that host from it', async ({
     setSettings,
     visit,
     openPopup,
@@ -97,16 +97,16 @@ test.describe('public lists', () => {
 
     // Blocked items come before the (long) list of scripts that ran.
     expect(await popup.locator('.section-title').allTextContents()).toEqual([
-      'Diblok global',
-      expect.stringMatching(/^›?Script jalan/),
+      'Blocked globally',
+      expect.stringMatching(/^›?Scripts that ran/),
     ]);
     const hit = popup.locator('.list-hit', { hasText: 'cdn.test' });
     await expect(hit).toContainText('EasyPrivacy');
     await expect(hit.locator('.count')).toHaveText('2');
-    await expect(popup.locator('.flag')).toHaveText(['2 diblok global', '3 jalan']);
-    await popup.getByRole('button', { name: 'Izinkan cdn.test dari EasyPrivacy' }).click();
+    await expect(popup.locator('.flag')).toHaveText(['2 blocked globally', '3 ran']);
+    await popup.getByRole('button', { name: 'Allow cdn.test from EasyPrivacy' }).click();
     await expect.poll(async () => (await getSettings()).listAllow).toEqual(['cdn.test']);
-    await expect(hit).toContainText('diizinkan');
+    await expect(hit).toContainText('allowed');
     await reloadFromPopup(popup, site);
     expect((await ran(site)).loaded).toEqual(ALL_SCRIPTS('site-a.test'));
   });
@@ -126,11 +126,11 @@ test.describe('public lists', () => {
     );
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
-    const toggle = page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' });
+    const toggle = page.getByRole('switch', { name: 'Turn on EasyPrivacy' });
 
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
-    await expect(page.getByText(/1\.001 domain · 1 path · 2 pengecualian/)).toBeVisible();
+    await expect(page.getByText(/1,001 domains · 1 path · 2 exceptions/)).toBeVisible();
     expect((await getSettings()).lists).toEqual(['easyprivacy']);
     await expect.poll(async () => (await ran(await visit('site-a.test'))).loaded).not.toContain('cdn.test/lib/a.js');
 
@@ -154,13 +154,13 @@ test.describe('public lists', () => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
 
-    await page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' }).click();
-    await expect(page.getByRole('alert')).toHaveText('Gagal unduh EasyPrivacy: HTTP 503');
-    await expect(page.getByRole('switch', { name: 'Aktifkan EasyPrivacy' })).toHaveAttribute('aria-checked', 'false');
+    await page.getByRole('switch', { name: 'Turn on EasyPrivacy' }).click();
+    await expect(page.getByRole('alert')).toHaveText("Couldn't download EasyPrivacy: HTTP 503");
+    await expect(page.getByRole('switch', { name: 'Turn on EasyPrivacy' })).toHaveAttribute('aria-checked', 'false');
     expect((await getSettings()).lists).toEqual([]);
   });
 
-  test('"Perbarui sekarang" replaces the data; a broken update keeps the old one', async ({
+  test('"Refresh now" replaces the data; a broken update keeps the old one', async ({
     setSettings,
     context,
     extensionId,
@@ -168,17 +168,17 @@ test.describe('public lists', () => {
     await setSettings(ON, { easyprivacy: { ...LIST, domains: Array.from({ length: 1200 }, (_, i) => `d${i}.test`) } });
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await expect(page.getByText(/1\.200 domain/)).toBeVisible();
+    await expect(page.getByText(/1,200 domains/)).toBeVisible();
 
     await context.route(LIST_URL, (r) => r.fulfill({ body: '||only.one^' }));
-    await page.getByRole('button', { name: 'Perbarui sekarang' }).click();
-    await expect(page.getByRole('alert')).toContainText('cuma berisi 1 domain');
-    await expect(page.getByText(/1\.200 domain/)).toBeVisible();
+    await page.getByRole('button', { name: 'Refresh now' }).click();
+    await expect(page.getByRole('alert')).toContainText('has only 1 domain');
+    await expect(page.getByText(/1,200 domains/)).toBeVisible();
 
     await context.unroute(LIST_URL);
     await context.route(LIST_URL, (r) => r.fulfill({ body: fakeList() }));
-    await page.getByRole('button', { name: 'Perbarui sekarang' }).click();
-    await expect(page.getByText(/1\.001 domain/)).toBeVisible();
+    await page.getByRole('button', { name: 'Refresh now' }).click();
+    await expect(page.getByText(/1,001 domains/)).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
 
@@ -191,7 +191,7 @@ test.describe('public lists', () => {
     await setSettings({ ...ON, listAllow: ['cdn.test'] }, { easyprivacy: LIST });
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await page.getByRole('button', { name: 'Blok lagi cdn.test dari daftar' }).click();
+    await page.getByRole('button', { name: 'Block cdn.test from the list again' }).click();
     await expect.poll(async () => (await getSettings()).listAllow).toEqual([]);
   });
 
