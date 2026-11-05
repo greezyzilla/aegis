@@ -280,12 +280,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.host-name > span {
-  display: inline-block;
-}
 .host-name[data-run] {
   text-overflow: clip;
   mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+}
+/* Inline while at rest so the ellipsis shows; a block only while it scrolls. */
+.host-name[data-run] > span {
+  display: inline-block;
 }
 @media (prefers-reduced-motion: no-preference) {
   .host-name[data-run] > span {

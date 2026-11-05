@@ -208,6 +208,7 @@ export default function App() {
                 <ActiveRules
                   rules={view.activeRules}
                   allowedBy={view.allowedBy}
+                  isOwn={view.isOwn}
                   onRemove={(id) => act(removeRule(id))}
                 />
               </Section>

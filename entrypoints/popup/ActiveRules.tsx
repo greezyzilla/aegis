@@ -5,10 +5,11 @@ interface Props {
   rules: AllowRule[];
   /** Scripts this rule let through on this page. */
   allowedBy: (rule: AllowRule) => number;
+  isOwn: (host: string) => boolean;
   onRemove: (id: string) => void;
 }
 
-export function ActiveRules({ rules, allowedBy, onRemove }: Props) {
+export function ActiveRules({ rules, allowedBy, isOwn, onRemove }: Props) {
   if (rules.length === 0) {
     return <p className="empty">Belum ada rule yang berlaku di sini.</p>;
   }
@@ -23,7 +24,7 @@ export function ActiveRules({ rules, allowedBy, onRemove }: Props) {
               <span className="chevron lead" title={global ? 'Semua situs' : `Hanya di ${r.scope}`}>
                 {global ? Icon.globe : Icon.home}
               </span>
-              <Avatar host={r.domain} />
+              <Avatar host={r.domain} own={isOwn(r.domain)} />
               <HostName name={r.script ? `${r.domain} / ${r.script}` : r.domain} />
               <Count n={allowedBy(r)} tone="allowed" />
               <span className="sr-only">{global ? 'semua situs' : `hanya di ${r.scope}`}</span>
